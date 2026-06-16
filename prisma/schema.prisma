@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  KEPALA_SEKOLAH
+  GURU
+  SISWA
+  ORANG_TUA
+}
+
+enum StatusAbsensi {
+  HADIR
+  TERLAMBAT
+  IZIN
+  SAKIT
+  ALPHA
+}
+
+enum StatusIzin {
+  MENUNGGU
+  DISETUJUI
+  DITOLAK
+}
+
+enum JenisIzin {
+  IZIN
+  SAKIT
+  CUTI
+  DINAS
+}
+
+model Sekolah {
+  id          String   @id @default(cuid())
+  nama        String
+  npsn        String?  @unique
+  alamat      String
+  latitude    Float
+  longitude   Float
+  radiusMeters Int     @default(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  jamMasuk    JamAbsensi[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  nama         String
+  email        String   @unique
+  password     String
+  role         Role
+  nip          String?  @unique
+  nis          String?  @unique
+  noHp         String?
+  noHpOrtu     String?
+  fotoWajah    String?
+  wajahEmbedding Float[]
+  aktif        Boolean  @default(true)
+  sekolahId    String
+  sekolah      Sekolah  @relation(fields: [sekolahId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  absensi      Absensi[]
+  izin         Izin[]
+  izinApprover Izin[]   @relation("Approver")
+  gaji         Gaji[]
+}
+
+model JamAbsensi {
+  id          String   @id @default(cuid())
+  nama        String
+  jamMasuk    String
+  jamPulang   String
+  toleransiMenit Int   @default(15)
+  berlakuUntuk Role[]
+  sekolahId   String
+  sekolah     Sekolah  @relation(fields: [sekolahId], references: [id])
+  createdAt   DateTime @default(now())
+
+  absensi     Absensi[]
+}
+
+model Absensi {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  tanggal        DateTime      @db.Date
+  jamMasukId     String?
+  jamMasuk       JamAbsensi?   @relation(fields: [jamMasukId], references: [id])
+  waktuMasuk     DateTime?
+  waktuPulang    DateTime?
+  status         StatusAbsensi @default(HADIR)
+  latitudeMasuk  Float?
+  longitudeMasuk Float?
+  fotoMasuk      String?
+  latitudePulang  Float?
+  longitudePulang Float?
+  fotoPulang      String?
+  keterangan     String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([userId, tanggal])
+  @@index([tanggal])
+  @@index([userId])
+}
+
+model Izin {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  jenis       JenisIzin
+  tanggalMulai DateTime  @db.Date
+  tanggalSelesai DateTime @db.Date
+  alasan      String
+  lampiran    String?
+  status      StatusIzin @default(MENUNGGU)
+  approverId  String?
+  approver    User?      @relation("Approver", fields: [approverId], references: [id])
+  catatanApprover String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Gaji {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  bulan            Int
+  tahun            Int
+  gajiPokok        Float
+  tunjanganHadir   Float    @default(0)
+  potonganAlpha    Float    @default(0)
+  potonganTerlambat Float   @default(0)
+  totalGaji        Float
+  jumlahHadir      Int      @default(0)
+  jumlahAlpha      Int      @default(0)
+  jumlahTerlambat  Int      @default(0)
+  jumlahIzin       Int      @default(0)
+  catatanGaji      String?
+  dibayarkan       Boolean  @default(false)
+  tanggalBayar     DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([userId, bulan, tahun])
+  @@index([bulan, tahun])
+}
+
+model NotifikasiLog {
+  id        String   @id @default(cuid())
+  userId    String
+  jenis     String
+  pesan     String
+  noTujuan  String
+  berhasil  Boolean  @default(false)
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
