@@ -149,9 +149,9 @@ export default function ProfilPage() {
           )}
 
           {status === 'camera' && (
-            <button onClick={ambilDanSimpan} disabled={status === 'capturing'}
-              className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 disabled:opacity-40 mb-2">
-              {status === 'capturing' ? 'Memproses...' : 'Ambil Foto & Simpan'}
+            <button onClick={ambilDanSimpan}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 mb-2">
+              Ambil Foto & Simpan
             </button>
           )}
 
