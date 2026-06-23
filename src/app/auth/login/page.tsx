@@ -47,10 +47,10 @@ export default function LoginPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 w-full max-w-sm">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-bold text-lg">S</span>
+            <span className="text-white font-bold text-lg">Z</span>
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">SiHadir</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Z-Absen</h1>
             <p className="text-xs text-gray-400">Sistem Absensi Digital</p>
           </div>
         </div>

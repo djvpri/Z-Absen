@@ -63,7 +63,7 @@ export default function DashboardAdmin() {
             <span className="text-white text-sm font-bold">S</span>
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">SiHadir Admin</p>
+            <p className="text-sm font-semibold text-gray-900">Z-Absen Admin</p>
             <p className="text-xs text-gray-400">{ringkasan.tanggal}</p>
           </div>
         </div>

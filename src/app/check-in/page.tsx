@@ -160,7 +160,7 @@ export default function CheckInPage() {
           <span className="text-white text-sm font-bold">S</span>
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-900">SiHadir</p>
+          <p className="text-sm font-semibold text-gray-900">Z-Absen</p>
           <p className="text-xs text-gray-400">
             {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
@@ -204,12 +204,15 @@ export default function CheckInPage() {
             {status === 'scanning' ? 'Memverifikasi...' : 'Absen Sekarang'}
           </button>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             <a href="/izin" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
               Ajukan Izin
             </a>
             <a href="/riwayat" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
               Riwayat
+            </a>
+            <a href="/profil" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
+              Profil
             </a>
           </div>
         </div>
