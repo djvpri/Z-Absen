@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionFromRequest } from './src/lib/auth'
 
-const publicRoutes = ['/auth/login', '/auth/register']
+const publicRoutes = ['/auth/login', '/auth/register', '/sso', '/api/auth/sso-verify', '/api/admin/cross-app']
 const adminRoutes = ['/admin']
 
 export async function middleware(req: NextRequest) {
