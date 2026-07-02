@@ -1,125 +1,187 @@
+export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
-const ADMIN_SECRET = process.env.CROSS_APP_SECRET || 'z-ecosystem-admin-2026'
+// Migration 2026-07-02: Dual secret support during transition
+const NEW_SECRET = process.env.CROSS_APP_SECRET || 'uurclTHL375CiZeWi2g4T3GczU2YNY9I1wzjlsVTgSk'
+const OLD_SECRET = 'z-ecosystem-admin-2026'
+const VALID_SECRETS = [NEW_SECRET, OLD_SECRET]
 
-function auth(req: NextRequest) {
-  return req.headers.get('authorization') === `Bearer ${ADMIN_SECRET}`
+function checkAuth(req: NextRequest) {
+  const auth = req.headers.get('authorization')
+  const token = auth?.replace('Bearer ', '')
+  return token ? VALID_SECRETS.includes(token) : false
 }
 
 export async function GET(req: NextRequest) {
-  if (!auth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const sekolahs = await prisma.sekolah.findMany({
-    select: { id: true, nama: true, npsn: true, alamat: true },
-    orderBy: { createdAt: 'desc' },
-  })
+  try {
+    const sekolah = await prisma.sekolah.findMany({
+      select: {
+        id: true,
+        nama: true,
+        npsn: true,
+        alamat: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
 
-  const users = await prisma.user.findMany({
-    select: { id: true, nama: true, email: true, role: true, aktif: true, sekolahId: true },
-    orderBy: { createdAt: 'desc' },
-  })
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        nama: true,
+        email: true,
+        role: true,
+        nip: true,
+        nis: true,
+        aktif: true,
+        sekolahId: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
 
-  return NextResponse.json({
-    tenants: sekolahs.map(s => ({
-      id: s.id, name: s.nama, npsn: s.npsn, active: true,
-    })),
-    users: users.map(u => ({
-      id: u.id, name: u.nama, email: u.email,
-      role: u.role.toLowerCase(), tenantId: u.sekolahId, active: u.aktif,
-    })),
-  })
+    return NextResponse.json({
+      tenants: sekolah.map(s => ({
+        id: s.id,
+        name: s.nama,
+        plan: 'pro', // Z-Absen tidak punya plan tier
+        active: true,
+        expires_at: null,
+      })),
+      users: users.map(u => ({
+        id: u.id,
+        name: u.nama,
+        email: u.email,
+        role: u.role,
+        active: u.aktif,
+        tenantId: u.sekolahId,
+      })),
+    })
+  } catch (error) {
+    console.error('Cross-app GET error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
-  if (!auth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!checkAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { action, data, email } = await req.json()
+  try {
+    const { action, email, data } = await req.json()
 
-  if (action === 'createTenant') {
-    if (!data?.name) return NextResponse.json({ error: 'Nama sekolah wajib' }, { status: 400 })
-    const sekolah = await prisma.sekolah.create({
-      data: {
-        nama: data.name,
-        npsn: data.npsn || null,
-        alamat: data.alamat || data.address || '-',
-        latitude: data.latitude || 0,
-        longitude: data.longitude || 0,
-        radiusMeters: data.radius || 100,
+    // --- Tenant (Sekolah) actions ---
+    if (action === 'createTenant') {
+      const name = String(data?.name || '').trim()
+      if (!name) return NextResponse.json({ error: 'name wajib diisi' }, { status: 400 })
+      
+      const sekolah = await prisma.sekolah.create({
+        data: {
+          nama: name,
+          alamat: data?.alamat || '-',
+          latitude: -0.5,
+          longitude: 109.5,
+          radiusMeters: 100,
+        },
+      })
+      return NextResponse.json({ success: true, tenant: { id: sekolah.id, name: sekolah.nama } }, { status: 201 })
+    }
+
+    if (action === 'updateTenant') {
+      if (!data?.tenantId) return NextResponse.json({ error: 'tenantId wajib' }, { status: 400 })
+      await prisma.sekolah.update({
+        where: { id: data.tenantId },
+        data: {
+          nama: data.name || undefined,
+          alamat: data.alamat || undefined,
+        },
+      })
+      return NextResponse.json({ success: true })
+    }
+
+    if (action === 'deleteTenant') {
+      // Z-Absen: soft-delete user, tapi sekolah tetap ada (historical data)
+      if (!data?.tenantId) return NextResponse.json({ error: 'tenantId wajib' }, { status: 400 })
+      await prisma.user.updateMany({
+        where: { sekolahId: data.tenantId },
+        data: { aktif: false },
+      })
+      return NextResponse.json({ success: true, deactivated: true })
+    }
+
+    if (action === 'updatePlan') {
+      // Z-Absen tidak punya plan tier — return success tanpa perubahan
+      return NextResponse.json({ success: true, note: 'Z-Absen tidak menggunakan plan tier' })
+    }
+
+    // --- User actions ---
+    if (action === 'create') {
+      if (!data?.name || !data?.email || !data?.password) {
+        return NextResponse.json({ error: 'name, email, password wajib' }, { status: 400 })
       }
-    })
-    return NextResponse.json({ success: true, id: sekolah.id })
-  }
+      const existing = await prisma.user.findUnique({ where: { email: data.email } })
+      if (existing) return NextResponse.json({ error: 'Email sudah terdaftar' }, { status: 409 })
 
-  if (action === 'create') {
-    const userEmail = data?.email
-    if (!userEmail || !data?.name) return NextResponse.json({ error: 'Email dan nama wajib' }, { status: 400 })
-    const exists = await prisma.user.findUnique({ where: { email: userEmail } })
-    if (exists) return NextResponse.json({ error: 'Email sudah digunakan' }, { status: 409 })
+      let sekolahId = data.tenantId
+      if (!sekolahId) {
+        const firstSekolah = await prisma.sekolah.findFirst({ orderBy: { createdAt: 'asc' } })
+        if (!firstSekolah) return NextResponse.json({ error: 'Belum ada sekolah' }, { status: 400 })
+        sekolahId = firstSekolah.id
+      }
 
-    // Tentukan sekolah
-    let sekolahId = data?.tenantId
-    if (!sekolahId) {
-      const first = await prisma.sekolah.findFirst()
-      if (!first) return NextResponse.json({ error: 'Belum ada sekolah. Buat tenant dulu.' }, { status: 400 })
-      sekolahId = first.id
+      const hashed = await bcrypt.hash(data.password, 10)
+      const user = await prisma.user.create({
+        data: {
+          nama: data.name,
+          email: data.email,
+          password: hashed,
+          role: data.role || 'GURU',
+          sekolahId,
+        },
+      })
+      return NextResponse.json({ success: true, user: { id: user.id, name: user.nama, email: user.email } }, { status: 201 })
     }
 
-    const hash = await bcrypt.hash(data.password || 'ChangeMe123!', 10)
-    const role = ['ADMIN','KEPALA_SEKOLAH','GURU','SISWA','ORANG_TUA'].includes(data.role?.toUpperCase())
-      ? data.role.toUpperCase() as any : 'GURU'
-
-    const user = await prisma.user.create({
-      data: { nama: data.name, email: userEmail, password: hash, role, sekolahId }
-    })
-    return NextResponse.json({ success: true, id: user.id })
-  }
-
-  if (action === 'delete') {
-    const userEmail = email || data?.email
-    if (userEmail) {
-      await prisma.user.updateMany({ where: { email: userEmail }, data: { aktif: false } })
+    if (action === 'delete') {
+      if (!email) return NextResponse.json({ error: 'email wajib' }, { status: 400 })
+      const result = await prisma.user.updateMany({
+        where: { email },
+        data: { aktif: false },
+      })
+      if (!result.count) return NextResponse.json({ error: 'User tidak ditemukan' }, { status: 404 })
+      return NextResponse.json({ success: true, deactivated: true })
     }
-    return NextResponse.json({ success: true })
-  }
 
-  if (action === 'reactivate') {
-    const userEmail = email || data?.email
-    if (userEmail) {
-      await prisma.user.updateMany({ where: { email: userEmail }, data: { aktif: true } })
+    if (action === 'updateRole') {
+      if (!email || !data?.role) return NextResponse.json({ error: 'email & role wajib' }, { status: 400 })
+      const validRoles = ['ADMIN', 'KEPALA_SEKOLAH', 'GURU', 'SISWA', 'ORANG_TUA']
+      if (!validRoles.includes(data.role.toUpperCase())) {
+        return NextResponse.json({ error: `Role tidak valid. Pilih: ${validRoles.join(', ')}` }, { status: 400 })
+      }
+      const result = await prisma.user.updateMany({
+        where: { email },
+        data: { role: data.role.toUpperCase() as any },
+      })
+      if (!result.count) return NextResponse.json({ error: 'User tidak ditemukan' }, { status: 404 })
+      return NextResponse.json({ success: true })
     }
-    return NextResponse.json({ success: true })
-  }
 
-  if (action === 'updateRole') {
-    const userEmail = email || data?.email
-    const roleMap: Record<string, string> = {
-      owner: 'ADMIN', admin: 'ADMIN', practitioner: 'GURU', guru: 'GURU', siswa: 'SISWA'
+    if (action === 'reactivate') {
+      if (!email) return NextResponse.json({ error: 'email wajib' }, { status: 400 })
+      const result = await prisma.user.updateMany({
+        where: { email },
+        data: { aktif: true },
+      })
+      if (!result.count) return NextResponse.json({ error: 'User tidak ditemukan' }, { status: 404 })
+      return NextResponse.json({ success: true, reactivated: true })
     }
-    const role = roleMap[data?.role?.toLowerCase()] || 'GURU'
-    if (userEmail) {
-      await prisma.user.updateMany({ where: { email: userEmail }, data: { role: role as any } })
-    }
-    return NextResponse.json({ success: true })
-  }
 
-  if (action === 'moveTenant') {
-    const userEmail = email || data?.email
-    if (userEmail && data?.tenantId) {
-      await prisma.user.updateMany({ where: { email: userEmail }, data: { sekolahId: data.tenantId } })
-    }
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+  } catch (error) {
+    console.error('Cross-app POST error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-
-  if (action === 'updateTenant') {
-    if (!data?.id) return NextResponse.json({ error: 'ID sekolah wajib' }, { status: 400 })
-    await prisma.sekolah.update({
-      where: { id: data.id },
-      data: { nama: data.name, npsn: data.npsn || undefined }
-    })
-    return NextResponse.json({ success: true })
-  }
-
-  return NextResponse.json({ error: 'Action tidak dikenal' }, { status: 400 })
 }
