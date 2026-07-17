@@ -1,85 +1,63 @@
-import { PrismaClient, Role } from '@prisma/client'
-import bcrypt from 'bcryptjs'
+import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  const sekolah = await prisma.sekolah.upsert({
-    where: { npsn: '12345678' },
-    update: {},
-    create: {
-      nama: 'SMPN 1 Pontianak',
-      npsn: '12345678',
-      alamat: 'Jl. Pendidikan No. 1, Pontianak',
-      latitude: -0.0263303,
-      longitude: 109.3425,
-      radiusMeters: 100,
-    },
-  })
+  console.log('🌱 Seeding Z-Absen...\n')
 
-  const adminPassword = await bcrypt.hash('admin123', 10)
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@sihadir.id' },
-    update: {},
-    create: {
-      nama: 'Administrator',
-      email: 'admin@sihadir.id',
-      password: adminPassword,
-      role: Role.ADMIN,
-      sekolahId: sekolah.id,
-      aktif: true,
+  // ── Plans ──────────────────────────────────────────────────────────
+  const plans = [
+    {
+      name: 'TRIAL' as const,
+      maxAnggota: 10, maxLokasi: 1,
+      hargaBulanan: 0, hargaTahunan: 0,
+      fitur: { whatsapp: false, telegram: false, export: true, faceRec: true, laporan: true, multiLokasi: false },
     },
-  })
-
-  const kepsekPassword = await bcrypt.hash('kepsek123', 10)
-  await prisma.user.upsert({
-    where: { email: 'kepsek@sihadir.id' },
-    update: {},
-    create: {
-      nama: 'Drs. Kepala Sekolah',
-      email: 'kepsek@sihadir.id',
-      password: kepsekPassword,
-      role: Role.KEPALA_SEKOLAH,
-      nip: '197001012000011001',
-      noHp: '08123456789',
-      sekolahId: sekolah.id,
-      aktif: true,
+    {
+      name: 'STARTER' as const,
+      maxAnggota: 25, maxLokasi: 1,
+      hargaBulanan: 99000, hargaTahunan: 990000,
+      fitur: { whatsapp: false, telegram: false, export: true, faceRec: true, laporan: true, multiLokasi: false },
     },
-  })
-
-  await prisma.jamAbsensi.upsert({
-    where: { id: 'jam-guru-pagi' },
-    update: {},
-    create: {
-      id: 'jam-guru-pagi',
-      nama: 'Jam Masuk Guru',
-      jamMasuk: '07:00',
-      jamPulang: '14:00',
-      toleransiMenit: 15,
-      berlakuUntuk: [Role.GURU, Role.KEPALA_SEKOLAH],
-      sekolahId: sekolah.id,
+    {
+      name: 'BISNIS' as const,
+      maxAnggota: 100, maxLokasi: 3,
+      hargaBulanan: 249000, hargaTahunan: 2490000,
+      fitur: { whatsapp: true, telegram: false, export: true, faceRec: true, laporan: true, multiLokasi: true },
     },
-  })
-
-  await prisma.jamAbsensi.upsert({
-    where: { id: 'jam-siswa-pagi' },
-    update: {},
-    create: {
-      id: 'jam-siswa-pagi',
-      nama: 'Jam Masuk Siswa',
-      jamMasuk: '07:00',
-      jamPulang: '13:00',
-      toleransiMenit: 10,
-      berlakuUntuk: [Role.SISWA],
-      sekolahId: sekolah.id,
+    {
+      name: 'PRO' as const,
+      maxAnggota: 500, maxLokasi: 10,
+      hargaBulanan: 499000, hargaTahunan: 4990000,
+      fitur: { whatsapp: true, telegram: true, export: true, faceRec: true, laporan: true, multiLokasi: true },
     },
-  })
+    {
+      name: 'ENTERPRISE' as const,
+      maxAnggota: -1, maxLokasi: -1,
+      hargaBulanan: 0, hargaTahunan: 0,
+      fitur: { whatsapp: true, telegram: true, export: true, faceRec: true, laporan: true, multiLokasi: true },
+    },
+  ]
 
-  console.log('Seed selesai!')
-  console.log('Admin:', admin.email, '/ password: admin123')
-  console.log('Sekolah:', sekolah.nama)
+  for (const plan of plans) {
+    await prisma.plan.upsert({ where: { name: plan.name }, update: plan, create: plan })
+    console.log(`  ✓ Plan ${plan.name}`)
+  }
+
+  // ── Super Admin ────────────────────────────────────────────────────
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL ?? 'admin@zomet.my.id'
+  const superAdmin = await prisma.user.upsert({
+    where: { email: superAdminEmail },
+    update: { isSuperAdmin: true },
+    create: { email: superAdminEmail, nama: 'Super Admin', isSuperAdmin: true },
+  })
+  console.log(`\n  ✓ Super Admin: ${superAdmin.email}`)
+
+  console.log('\n✅ Seeding selesai!')
+  console.log('\nCatatan penting:')
+  console.log('  • Tambahkan SUPER_ADMIN_EMAIL=email-google-kamu@gmail.com ke .env')
+  console.log('  • Login via SSO Z One untuk akses Super Admin')
+  console.log('  • User lain cukup buka z-absen, login via Z One, lalu daftar organisasi')
 }
 
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect())
+main().catch((e) => { console.error(e); process.exit(1) }).finally(() => prisma.$disconnect())

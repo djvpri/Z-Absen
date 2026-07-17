@@ -7,13 +7,197 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  KEPALA_SEKOLAH
-  GURU
-  SISWA
-  ORANG_TUA
+// =====================================================
+// PLAN & SUBSCRIPTION (Membership)
+// =====================================================
+
+enum PlanName {
+  TRIAL
+  STARTER
+  BISNIS
+  PRO
+  ENTERPRISE
 }
+
+enum SubStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model Plan {
+  id           String   @id @default(cuid())
+  name         PlanName @unique
+  maxAnggota   Int      // -1 = unlimited
+  maxLokasi    Int
+  hargaBulanan Decimal  @db.Decimal(10, 2) @default(0)
+  hargaTahunan Decimal  @db.Decimal(10, 2) @default(0)
+  // { whatsapp, telegram, export, faceRec, laporan, multiLokasi }
+  fitur        Json
+  tenants      Tenant[]
+  createdAt    DateTime @default(now())
+
+  @@map("plans")
+}
+
+model Subscription {
+  id            String    @id @default(cuid())
+  tenantId      String    @unique
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status        SubStatus @default(TRIAL)
+  mulai         DateTime  @default(now())
+  berakhir      DateTime
+  refPembayaran String?
+  catatan       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("subscriptions")
+}
+
+// =====================================================
+// TENANT (Organisasi)
+// =====================================================
+
+enum TenantType {
+  SEKOLAH
+  PERUSAHAAN
+}
+
+model Tenant {
+  id           String         @id @default(cuid())
+  nama         String
+  slug         String         @unique
+  type         TenantType     @default(PERUSAHAAN)
+  logoUrl      String?
+  alamat       String?
+  telepon      String?
+  planId       String
+  plan         Plan           @relation(fields: [planId], references: [id])
+  subscription Subscription?
+  members      TenantMember[]
+  lokasi       Lokasi[]
+  jamAbsensi   JamAbsensi[]
+  absensi      Absensi[]
+  izin         Izin[]
+  invites      Invite[]
+  pengumuman   Pengumuman[]
+  gaji         Gaji[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@map("tenants")
+}
+
+// =====================================================
+// USER & TENANT MEMBER
+// =====================================================
+
+enum Role {
+  SUPER_ADMIN   // Platform owner
+  TENANT_ADMIN  // Kepala sekolah / HRD / pemilik bisnis
+  ANGGOTA       // Guru / karyawan
+  WALI          // Orang tua (khusus SEKOLAH)
+}
+
+// User = identitas global dari SSO Z One — tidak ada password
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  nama         String
+  avatarUrl    String?
+  isSuperAdmin Boolean        @default(false)
+  memberships  TenantMember[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@map("users")
+}
+
+// TenantMember = User yang bergabung ke Tenant tertentu
+model TenantMember {
+  id            String    @id @default(cuid())
+  userId        String
+  tenantId      String
+  role          Role      @default(ANGGOTA)
+  jabatan       String?   // "Guru Matematika" / "Staff HRD"
+  nip           String?   // NIP / NIK / ID karyawan
+  noHp          String?
+  faceEmbedding Json?     // face-api.js descriptor vector
+  aktif         Boolean   @default(true)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  absensi       Absensi[]
+  izin          Izin[]
+  izinApprover  Izin[]    @relation("Approver")
+  gaji          Gaji[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, tenantId])
+  @@map("tenant_members")
+}
+
+// Invite link untuk mengundang anggota
+model Invite {
+  id        String    @id @default(cuid())
+  tenantId  String
+  email     String?   // null = siapa saja bisa pakai link ini
+  token     String    @unique @default(cuid())
+  role      Role      @default(ANGGOTA)
+  jabatan   String?
+  usedAt    DateTime?
+  expiredAt DateTime
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@map("invites")
+}
+
+// =====================================================
+// LOKASI & GEOFENCING
+// =====================================================
+
+model Lokasi {
+  id        String    @id @default(cuid())
+  tenantId  String
+  nama      String    // "Kantor Pusat", "Cabang Bandung"
+  alamat    String?
+  lat       Float
+  lng       Float
+  radius    Int       @default(100) // meter
+  aktif     Boolean   @default(true)
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  absensi   Absensi[]
+  createdAt DateTime  @default(now())
+
+  @@map("lokasi")
+}
+
+// =====================================================
+// JAM ABSENSI / SHIFT
+// =====================================================
+
+model JamAbsensi {
+  id          String   @id @default(cuid())
+  tenantId    String
+  nama        String   // "Shift Pagi", "Full Day", "WFH"
+  hari        String   // "SENIN,SELASA,RABU,KAMIS,JUMAT"
+  jamMasuk    String   // "08:00"
+  jamKeluar   String   // "17:00"
+  toleransi   Int      @default(15)
+  aktif       Boolean  @default(true)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  absensi     Absensi[]
+  createdAt   DateTime @default(now())
+
+  @@map("jam_absensi")
+}
+
+// =====================================================
+// ABSENSI
+// =====================================================
 
 enum StatusAbsensi {
   HADIR
@@ -23,145 +207,131 @@ enum StatusAbsensi {
   ALPHA
 }
 
+model Absensi {
+  id            String        @id @default(cuid())
+  tenantId      String
+  memberId      String
+  lokasiId      String?
+  jamAbsensiId  String?
+  tanggal       DateTime      @db.Date
+  waktuMasuk    DateTime?
+  waktuKeluar   DateTime?
+  status        StatusAbsensi @default(HADIR)
+  latMasuk      Float?
+  lngMasuk      Float?
+  latKeluar     Float?
+  lngKeluar     Float?
+  fotoMasuk     String?
+  fotoKeluar    String?
+  keterangan    String?
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member        TenantMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  lokasi        Lokasi?       @relation(fields: [lokasiId], references: [id])
+  jamAbsensi    JamAbsensi?   @relation(fields: [jamAbsensiId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([memberId, tanggal])
+  @@index([tenantId, tanggal])
+  @@map("absensi")
+}
+
+// =====================================================
+// IZIN / CUTI
+// =====================================================
+
+enum JenisIzin {
+  IZIN
+  SAKIT
+  CUTI_TAHUNAN
+  CUTI_SAKIT
+  DINAS_LUAR
+}
+
 enum StatusIzin {
   MENUNGGU
   DISETUJUI
   DITOLAK
 }
 
-enum JenisIzin {
-  IZIN
-  SAKIT
-  CUTI
-  DINAS
-}
-
-model Sekolah {
-  id          String   @id @default(cuid())
-  nama        String
-  npsn        String?  @unique
-  alamat      String
-  latitude    Float
-  longitude   Float
-  radiusMeters Int     @default(100)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  users       User[]
-  jamMasuk    JamAbsensi[]
-}
-
-model User {
-  id           String   @id @default(cuid())
-  nama         String
-  email        String   @unique
-  password     String
-  role         Role
-  nip          String?  @unique
-  nis          String?  @unique
-  noHp         String?
-  noHpOrtu     String?
-  fotoWajah    String?
-  wajahEmbedding Float[]
-  aktif        Boolean  @default(true)
-  sekolahId    String
-  sekolah      Sekolah  @relation(fields: [sekolahId], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  absensi      Absensi[]
-  izin         Izin[]
-  izinApprover Izin[]   @relation("Approver")
-  gaji         Gaji[]
-}
-
-model JamAbsensi {
-  id          String   @id @default(cuid())
-  nama        String
-  jamMasuk    String
-  jamPulang   String
-  toleransiMenit Int   @default(15)
-  berlakuUntuk Role[]
-  sekolahId   String
-  sekolah     Sekolah  @relation(fields: [sekolahId], references: [id])
-  createdAt   DateTime @default(now())
-
-  absensi     Absensi[]
-}
-
-model Absensi {
-  id             String        @id @default(cuid())
-  userId         String
-  user           User          @relation(fields: [userId], references: [id])
-  tanggal        DateTime      @db.Date
-  jamMasukId     String?
-  jamMasuk       JamAbsensi?   @relation(fields: [jamMasukId], references: [id])
-  waktuMasuk     DateTime?
-  waktuPulang    DateTime?
-  status         StatusAbsensi @default(HADIR)
-  latitudeMasuk  Float?
-  longitudeMasuk Float?
-  fotoMasuk      String?
-  latitudePulang  Float?
-  longitudePulang Float?
-  fotoPulang      String?
-  keterangan     String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  @@unique([userId, tanggal])
-  @@index([tanggal])
-  @@index([userId])
-}
-
 model Izin {
-  id          String     @id @default(cuid())
-  userId      String
-  user        User       @relation(fields: [userId], references: [id])
-  jenis       JenisIzin
-  tanggalMulai DateTime  @db.Date
-  tanggalSelesai DateTime @db.Date
-  alasan      String
-  lampiran    String?
-  status      StatusIzin @default(MENUNGGU)
-  approverId  String?
-  approver    User?      @relation("Approver", fields: [approverId], references: [id])
+  id              String     @id @default(cuid())
+  tenantId        String
+  memberId        String
+  jenis           JenisIzin
+  tanggalMulai    DateTime   @db.Date
+  tanggalSelesai  DateTime   @db.Date
+  alasan          String
+  lampiranUrl     String?
+  status          StatusIzin @default(MENUNGGU)
+  approverId      String?
   catatanApprover String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member          TenantMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  approver        TenantMember? @relation("Approver", fields: [approverId], references: [id])
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  @@index([userId])
-  @@index([status])
+  @@index([tenantId, status])
+  @@map("izin")
 }
+
+// =====================================================
+// GAJI / INSENTIF
+// =====================================================
 
 model Gaji {
   id               String   @id @default(cuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id])
+  tenantId         String
+  memberId         String
   bulan            Int
   tahun            Int
-  gajiPokok        Float
+  gajiPokok        Float    @default(0)
   tunjanganHadir   Float    @default(0)
   potonganAlpha    Float    @default(0)
   potonganTerlambat Float   @default(0)
-  totalGaji        Float
+  totalGaji        Float    @default(0)
   jumlahHadir      Int      @default(0)
   jumlahAlpha      Int      @default(0)
   jumlahTerlambat  Int      @default(0)
   jumlahIzin       Int      @default(0)
-  catatanGaji      String?
+  catatan          String?
   dibayarkan       Boolean  @default(false)
   tanggalBayar     DateTime?
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member           TenantMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  @@unique([userId, bulan, tahun])
-  @@index([bulan, tahun])
+  @@unique([memberId, bulan, tahun])
+  @@index([tenantId, bulan, tahun])
+  @@map("gaji")
 }
+
+// =====================================================
+// PENGUMUMAN
+// =====================================================
+
+model Pengumuman {
+  id        String   @id @default(cuid())
+  tenantId  String
+  judul     String
+  isi       String
+  aktif     Boolean  @default(true)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@map("pengumuman")
+}
+
+// =====================================================
+// LOG NOTIFIKASI
+// =====================================================
 
 model NotifikasiLog {
   id        String   @id @default(cuid())
-  userId    String
+  tenantId  String?
+  memberId  String?
   jenis     String
   pesan     String
   noTujuan  String
@@ -169,5 +339,6 @@ model NotifikasiLog {
   error     String?
   createdAt DateTime @default(now())
 
-  @@index([userId])
+  @@index([tenantId])
+  @@map("notifikasi_log")
 }

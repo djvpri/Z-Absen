@@ -10,14 +10,14 @@ export default function RootPage() {
             </div>
             <span className="text-lg font-semibold">Z-Absen</span>
           </div>
-          <a href="/auth/login" className="bg-white text-blue-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-50 transition">
+          <a href="/sso" className="bg-white text-blue-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-50 transition">
             Masuk
           </a>
         </nav>
 
         <div className="max-w-6xl mx-auto px-4 py-16 md:py-24">
           <div className="max-w-2xl">
-            <p className="text-blue-200 text-sm font-medium mb-3">Sistem Absensi Digital Sekolah</p>
+            <p className="text-blue-200 text-sm font-medium mb-3">Sistem Absensi Digital untuk Sekolah & Perusahaan</p>
             <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-4">
               Absensi Sekolah<br />
               <span className="text-blue-200">Berbasis Face Recognition</span>
@@ -27,7 +27,7 @@ export default function RootPage() {
               notifikasi WhatsApp otomatis, laporan export PDF/Excel, dan penggajian berbasis kehadiran.
             </p>
             <div className="flex flex-wrap gap-3">
-              <a href="/auth/login" className="bg-white text-blue-700 px-6 py-3 rounded-xl font-medium hover:bg-blue-50 transition">
+              <a href="/sso" className="bg-white text-blue-700 px-6 py-3 rounded-xl font-medium hover:bg-blue-50 transition">
                 Mulai Gratis →
               </a>
               <a href="#fitur" className="border border-white/30 text-white px-6 py-3 rounded-xl font-medium hover:bg-white/10 transition">
@@ -164,7 +164,7 @@ export default function RootPage() {
         <div className="max-w-6xl mx-auto px-4 py-16 text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-3">Siap Digitalisasi Absensi?</h2>
           <p className="text-blue-100 mb-6 max-w-lg mx-auto">Mulai gratis hari ini. Tanpa kartu kredit. Setup 5 menit.</p>
-          <a href="/auth/login" className="inline-block bg-white text-blue-700 px-8 py-3 rounded-xl font-medium hover:bg-blue-50 transition">
+          <a href="/sso" className="inline-block bg-white text-blue-700 px-8 py-3 rounded-xl font-medium hover:bg-blue-50 transition">
             Mulai Sekarang →
           </a>
         </div>
