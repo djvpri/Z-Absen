@@ -75,10 +75,15 @@ export type ZOneTokenPayload = {
 }
 
 export async function verifyZOneToken(token: string): Promise<{ user: ZOneTokenPayload | null; debug: string }> {
-  const secret = new TextEncoder().encode(
-    process.env.CROSS_APP_SECRET || 'uurclTHL375CiZeWi2g4T3GczU2YNY9I1wzjlsVTgSk'
-  )
-  // Decode header+payload tanpa verifikasi untuk debug
+  // Coba semua kemungkinan secret agar tidak gagal karena perbedaan env var
+  const envSecret = (process.env.CROSS_APP_SECRET || '').trim()
+  const candidates = [
+    envSecret || 'z-ecosystem-admin-2026',
+    'z-ecosystem-admin-2026',
+    'uurclTHL375CiZeWi2g4T3GczU2YNY9I1wzjlsVTgSk',
+  ].filter((s, i, arr) => arr.indexOf(s) === i) // deduplicate
+
+  // Decode payload tanpa verifikasi untuk debug
   let rawPayload = '(decode failed)'
   try {
     const parts = token.split('.')
@@ -87,20 +92,22 @@ export async function verifyZOneToken(token: string): Promise<{ user: ZOneTokenP
     }
   } catch { /* ignore */ }
 
-  try {
-    const { payload } = await jwtVerify(token, secret)
-    const p = payload as unknown as ZOneTokenPayload
-    if (p.app !== 'zabsen') {
-      return { user: null, debug: `app mismatch: expected "zabsen" got "${p.app}"` }
-    }
-    if (!p.email) {
-      return { user: null, debug: 'no email in payload' }
-    }
-    return { user: p, debug: 'ok' }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return { user: null, debug: `jwtVerify error: ${msg} | rawPayload: ${rawPayload}` }
+  for (const candidate of candidates) {
+    try {
+      const secret = new TextEncoder().encode(candidate)
+      const { payload } = await jwtVerify(token, secret)
+      const p = payload as unknown as ZOneTokenPayload
+      if (p.app !== 'zabsen') {
+        return { user: null, debug: `app mismatch: expected "zabsen" got "${p.app}"` }
+      }
+      if (!p.email) {
+        return { user: null, debug: 'no email in payload' }
+      }
+      return { user: p, debug: `ok (matched secret index ${candidates.indexOf(candidate)})` }
+    } catch { /* try next candidate */ }
   }
+
+  return { user: null, debug: `all secrets failed | rawPayload: ${rawPayload}` }
 }
 
 // =====================================================
