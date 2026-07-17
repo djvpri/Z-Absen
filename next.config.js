@@ -1,7 +1,7 @@
 const path = require('path')
 const withPWA = require('next-pwa')({
   dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
+  disable: true, // next-pwa v5 tidak kompatibel dengan Next.js 14 App Router
   register: true,
   skipWaiting: true,
 })
