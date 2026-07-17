@@ -74,25 +74,32 @@ export type ZOneTokenPayload = {
   image?: string | null
 }
 
-export async function verifyZOneToken(token: string): Promise<ZOneTokenPayload | null> {
+export async function verifyZOneToken(token: string): Promise<{ user: ZOneTokenPayload | null; debug: string }> {
   const secret = new TextEncoder().encode(
     process.env.CROSS_APP_SECRET || 'uurclTHL375CiZeWi2g4T3GczU2YNY9I1wzjlsVTgSk'
   )
+  // Decode header+payload tanpa verifikasi untuk debug
+  let rawPayload = '(decode failed)'
+  try {
+    const parts = token.split('.')
+    if (parts.length === 3) {
+      rawPayload = Buffer.from(parts[1], 'base64url').toString('utf-8')
+    }
+  } catch { /* ignore */ }
+
   try {
     const { payload } = await jwtVerify(token, secret)
     const p = payload as unknown as ZOneTokenPayload
     if (p.app !== 'zabsen') {
-      console.error('[SSO] app mismatch, expected "zabsen" got:', p.app)
-      return null
+      return { user: null, debug: `app mismatch: expected "zabsen" got "${p.app}"` }
     }
     if (!p.email) {
-      console.error('[SSO] no email in token payload')
-      return null
+      return { user: null, debug: 'no email in payload' }
     }
-    return p
+    return { user: p, debug: 'ok' }
   } catch (err) {
-    console.error('[SSO] jwtVerify failed:', err instanceof Error ? err.message : err)
-    return null
+    const msg = err instanceof Error ? err.message : String(err)
+    return { user: null, debug: `jwtVerify error: ${msg} | rawPayload: ${rawPayload}` }
   }
 }
 

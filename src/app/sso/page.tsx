@@ -28,7 +28,7 @@ function SsoContent() {
       .then((d) => {
         if (!d.success) {
           setStatus('error')
-          setMsg(d.error || 'Login SSO gagal')
+          setMsg((d.error || 'Login SSO gagal') + (d.debug ? ` | debug: ${d.debug}` : ''))
           return
         }
         // Simpan daftar tenant jika multi-tenant

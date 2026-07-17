@@ -20,9 +20,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 1. Verifikasi token Z One ─────────────────────────────────────
-    const zoneUser = await verifyZOneToken(token)
+    const { user: zoneUser, debug: ssoDebug } = await verifyZOneToken(token)
     if (!zoneUser) {
-      return NextResponse.json({ error: 'Token SSO tidak valid atau kedaluwarsa' }, { status: 401 })
+      return NextResponse.json({ error: 'Token SSO tidak valid atau kedaluwarsa', debug: ssoDebug }, { status: 401 })
     }
 
     // ── 2. Cari atau buat User lokal ──────────────────────────────────
