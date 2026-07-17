@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getSessionFromRequest } from '@/lib/auth'
 import { z } from 'zod'
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
     where: {
       tenantId: session.tenantId,
       aktif: true,
-      NOT: { faceEmbedding: null },
+      NOT: { faceEmbedding: Prisma.DbNull },
     },
     select: {
       id: true,
