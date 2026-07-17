@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getSessionFromRequest } from '@/lib/auth'
 import { z } from 'zod'
@@ -39,18 +38,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const members = await prisma.tenantMember.findMany({
-    where: {
-      tenantId: session.tenantId,
-      aktif: true,
-      NOT: { faceEmbedding: Prisma.DbNull },
-    },
+  const allMembers = await prisma.tenantMember.findMany({
+    where: { tenantId: session.tenantId, aktif: true },
     select: {
       id: true,
       faceEmbedding: true,
       user: { select: { nama: true } },
     },
   })
+  const members = allMembers.filter((m) => m.faceEmbedding !== null)
 
   return NextResponse.json({
     users: members.map((m) => ({
