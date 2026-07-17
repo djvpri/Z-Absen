@@ -1,12 +1,15 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
+
+export const viewport: Viewport = {
+  themeColor: '#2563eb',
+}
 
 export const metadata: Metadata = {
   title: 'SiHadir — Sistem Kehadiran Digital',
   description: 'Absensi sekolah berbasis face recognition dan GPS',
   manifest: '/manifest.json',
-  themeColor: '#2563eb',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
