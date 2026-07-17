@@ -47,7 +47,7 @@ function SsoContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
         <div className="text-center max-w-sm">
-          <div className="text-4xl mb-4">❌</div>
+          <i className="bi bi-x-circle-fill text-4xl text-red-500 mb-4 block"></i>
           <p className="text-red-400 font-medium mb-2">Gagal Login</p>
           <p className="text-slate-500 text-sm mb-4">{msg}</p>
           <a href="https://zone.zomet.my.id" className="text-blue-400 text-sm underline">

@@ -12,6 +12,7 @@ const PUBLIC_ROUTES = [
   '/api/auth/logout',
   '/api/admin/cross-app',
   '/api/health',
+  '/api/demo',
 ]
 
 const ADMIN_ROUTES = ['/admin', '/super-admin']

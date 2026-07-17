@@ -73,6 +73,8 @@ model Tenant {
   logoUrl      String?
   alamat       String?
   telepon      String?
+  isDemo       Boolean        @default(false)
+  demoExpiresAt DateTime?
   planId       String
   plan         Plan           @relation(fields: [planId], references: [id])
   subscription Subscription?

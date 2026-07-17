@@ -5,8 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 
 interface DashboardData {
   ringkasan: {
-    totalGuru: number
-    totalSiswa: number
+    totalAnggota: number
     hadirHariIni: number
     terlambatHariIni: number
     izinMenunggu: number
@@ -15,14 +14,16 @@ interface DashboardData {
   absensiTerbaru: Array<{
     id: string
     status: string
-    waktuMasuk: string
-    user: { nama: string; role: string }
+    waktuMasuk: string | null
+    nama: string
+    jabatan: string | null
   }>
   grafik7Hari: Array<{
     tanggal: string
     status: string
     _count: number
   }>
+  isDemo: boolean
 }
 
 const statusWarna: Record<string, string> = {
@@ -36,12 +37,20 @@ const statusWarna: Record<string, string> = {
 export default function DashboardAdmin() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     fetch('/api/absensi/dashboard')
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false) })
   }, [])
+
+  async function handleReset() {
+    if (!confirm('Reset semua data demo? Aksi ini tidak bisa dibatalkan.')) return
+    setResetting(true)
+    await fetch('/api/demo/reset', { method: 'POST' })
+    window.location.reload()
+  }
 
   if (loading) {
     return (
@@ -57,6 +66,22 @@ export default function DashboardAdmin() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {data.isDemo && (
+        <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <i className="bi bi-info-circle"></i>
+            <span>Mode Demo — data reset otomatis setiap hari</span>
+          </div>
+          <button
+            onClick={handleReset}
+            disabled={resetting}
+            className="text-xs bg-white text-blue-600 font-medium px-3 py-1 rounded-full hover:bg-blue-50 disabled:opacity-60"
+          >
+            {resetting ? 'Mereset...' : 'Reset Sekarang'}
+          </button>
+        </div>
+      )}
+
       <header className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -73,10 +98,10 @@ export default function DashboardAdmin() {
       <div className="max-w-3xl mx-auto p-4 space-y-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: 'Total Guru', nilai: ringkasan.totalGuru, warna: 'blue' },
-            { label: 'Total Siswa', nilai: ringkasan.totalSiswa, warna: 'purple' },
+            { label: 'Total Anggota', nilai: ringkasan.totalAnggota, warna: 'blue' },
             { label: 'Hadir Hari Ini', nilai: ringkasan.hadirHariIni, warna: 'green' },
-            { label: 'Izin Menunggu', nilai: ringkasan.izinMenunggu, warna: 'amber' },
+            { label: 'Terlambat', nilai: ringkasan.terlambatHariIni, warna: 'amber' },
+            { label: 'Izin Menunggu', nilai: ringkasan.izinMenunggu, warna: 'purple' },
           ].map((k) => (
             <div key={k.label} className="bg-white border border-gray-100 rounded-xl p-4">
               <p className="text-xs text-gray-400 mb-1">{k.label}</p>
@@ -87,7 +112,7 @@ export default function DashboardAdmin() {
 
         {ringkasan.terlambatHariIni > 0 && (
           <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-2">
-            <span className="text-amber-600">⚠️</span>
+            <i className="bi bi-exclamation-triangle text-amber-600"></i>
             <p className="text-sm text-amber-700">
               {ringkasan.terlambatHariIni} orang terlambat hari ini
             </p>
@@ -132,12 +157,12 @@ export default function DashboardAdmin() {
               <div key={a.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
-                    {a.user.nama.charAt(0)}
+                    {a.nama.charAt(0)}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{a.user.nama}</p>
+                    <p className="text-sm font-medium text-gray-900">{a.nama}</p>
                     <p className="text-xs text-gray-400">
-                      {a.user.role} · {a.waktuMasuk ? new Date(a.waktuMasuk).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                      {a.jabatan ?? '-'} · {a.waktuMasuk ? new Date(a.waktuMasuk).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}
                     </p>
                   </div>
                 </div>
@@ -155,23 +180,23 @@ export default function DashboardAdmin() {
 
         <div className="grid grid-cols-2 gap-3">
           <a href="/admin/laporan" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
-            <p className="text-2xl mb-1">📄</p>
+            <i className="bi bi-file-text text-2xl text-blue-600 block mb-1"></i>
             <p className="text-sm font-medium text-gray-900">Laporan & PDF</p>
             <p className="text-xs text-gray-400">Export rekap bulanan</p>
           </a>
           <a href="/admin/gaji" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
-            <p className="text-2xl mb-1">💰</p>
+            <i className="bi bi-cash-coin text-2xl text-green-600 block mb-1"></i>
             <p className="text-sm font-medium text-gray-900">Hitung Gaji</p>
-            <p className="text-xs text-gray-400">Insentif kehadiran guru</p>
+            <p className="text-xs text-gray-400">Insentif kehadiran karyawan</p>
           </a>
           <a href="/admin/izin" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
-            <p className="text-2xl mb-1">📋</p>
+            <i className="bi bi-clipboard-check text-2xl text-purple-600 block mb-1"></i>
             <p className="text-sm font-medium text-gray-900">Approve Izin</p>
             <p className="text-xs text-gray-400">{ringkasan.izinMenunggu} menunggu</p>
           </a>
           <a href="/admin/users" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
-            <p className="text-2xl mb-1">👥</p>
-            <p className="text-sm font-medium text-gray-900">Kelola User</p>
+            <i className="bi bi-people text-2xl text-indigo-600 block mb-1"></i>
+            <p className="text-sm font-medium text-gray-900">Kelola Anggota</p>
             <p className="text-xs text-gray-400">Daftarkan wajah</p>
           </a>
         </div>

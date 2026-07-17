@@ -12,7 +12,8 @@ export async function GET(req: NextRequest) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const [totalAnggota, absensiHariIni, izinMenunggu, absensi7Hari] = await Promise.all([
+  const [tenant, totalAnggota, absensiHariIni, izinMenunggu, absensi7Hari] = await Promise.all([
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { isDemo: true } }),
     prisma.tenantMember.count({ where: { tenantId, aktif: true } }),
     prisma.absensi.findMany({
       where: { tenantId, tanggal: today },
@@ -48,7 +49,9 @@ export async function GET(req: NextRequest) {
       status: a.status,
       waktuMasuk: a.waktuMasuk,
       nama: a.member.user.nama,
+      jabatan: a.member.jabatan,
     })),
     grafik7Hari: absensi7Hari,
+    isDemo: tenant?.isDemo ?? false,
   })
 }
