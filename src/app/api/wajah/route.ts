@@ -5,23 +5,22 @@ import { z } from 'zod'
 
 const wajahSchema = z.object({
   embedding: z.array(z.number()).length(128),
-  fotoBase64: z.string(),
+  fotoBase64: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getSessionFromRequest(req)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!session || !session.memberId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const body = await req.json()
     const { embedding, fotoBase64 } = wajahSchema.parse(body)
 
-    await prisma.user.update({
-      where: { id: session.userId },
-      data: {
-        wajahEmbedding: embedding,
-        fotoWajah: fotoBase64,
-      },
+    await prisma.tenantMember.update({
+      where: { id: session.memberId },
+      data: { faceEmbedding: embedding },
     })
 
     return NextResponse.json({ sukses: true, pesan: 'Wajah berhasil didaftarkan' })
@@ -35,20 +34,28 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session || !session.tenantId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  const users = await prisma.user.findMany({
+  const members = await prisma.tenantMember.findMany({
     where: {
-      sekolahId: session.sekolahId,
-      wajahEmbedding: { isEmpty: false },
+      tenantId: session.tenantId,
+      aktif: true,
+      NOT: { faceEmbedding: null },
     },
     select: {
       id: true,
-      nama: true,
-      role: true,
-      wajahEmbedding: true,
+      faceEmbedding: true,
+      user: { select: { nama: true } },
     },
   })
 
-  return NextResponse.json({ users })
+  return NextResponse.json({
+    users: members.map((m) => ({
+      id: m.id,
+      nama: m.user.nama,
+      wajahEmbedding: m.faceEmbedding,
+    })),
+  })
 }

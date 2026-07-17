@@ -1,63 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionFromRequest } from '@/lib/auth'
-import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
-const userSchema = z.object({
-  nama: z.string().min(1),
-  email: z.string().email(),
-  password: z.string().min(6),
-  role: z.enum(['GURU', 'SISWA', 'KEPALA_SEKOLAH', 'ADMIN']),
-  nip: z.string().optional(),
-  nis: z.string().optional(),
-  noHp: z.string().optional(),
+const inviteSchema = z.object({
+  email: z.string().email().optional(),
+  role: z.enum(['TENANT_ADMIN', 'ANGGOTA', 'WALI']).default('ANGGOTA'),
+  jabatan: z.string().optional(),
 })
+
+function isAdmin(role: string | null) {
+  return ['TENANT_ADMIN', 'SUPER_ADMIN'].includes(role ?? '')
+}
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req)
-  if (!session || !['ADMIN', 'KEPALA_SEKOLAH'].includes(session.role)) {
+  if (!session || !isAdmin(session.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const users = await prisma.user.findMany({
-    where: { sekolahId: session.sekolahId },
-    select: {
-      id: true, nama: true, email: true, role: true, nip: true, nis: true,
-      noHp: true, aktif: true, wajahEmbedding: true,
-    },
-    orderBy: { nama: 'asc' },
+  const members = await prisma.tenantMember.findMany({
+    where: { tenantId: session.tenantId! },
+    include: { user: { select: { nama: true, email: true, avatarUrl: true } } },
+    orderBy: { user: { nama: 'asc' } },
   })
 
-  return NextResponse.json({ users })
+  return NextResponse.json({
+    users: members.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      nama: m.user.nama,
+      email: m.user.email,
+      avatarUrl: m.user.avatarUrl,
+      role: m.role,
+      jabatan: m.jabatan,
+      nip: m.nip,
+      aktif: m.aktif,
+      faceRegistered: !!m.faceEmbedding,
+    })),
+  })
 }
 
+// Buat invite link (menggantikan POST user langsung — user login via SSO Z One)
 export async function POST(req: NextRequest) {
   const session = await getSessionFromRequest(req)
-  if (!session || !['ADMIN', 'KEPALA_SEKOLAH'].includes(session.role)) {
+  if (!session || !isAdmin(session.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   try {
     const body = await req.json()
-    const data = userSchema.parse(body)
-    const hash = await bcrypt.hash(data.password, 10)
+    const data = inviteSchema.parse(body)
 
-    const user = await prisma.user.create({
+    const expiredAt = new Date()
+    expiredAt.setDate(expiredAt.getDate() + 7) // berlaku 7 hari
+
+    const invite = await prisma.invite.create({
       data: {
-        nama: data.nama,
+        tenantId: session.tenantId!,
         email: data.email,
-        password: hash,
-        role: data.role as any,
-        nip: data.nip || undefined,
-        nis: data.nis || undefined,
-        noHp: data.noHp || undefined,
-        sekolahId: session.sekolahId,
-        wajahEmbedding: [],
+        role: data.role,
+        jabatan: data.jabatan,
+        expiredAt,
       },
     })
 
-    return NextResponse.json({ user }, { status: 201 })
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+    const inviteUrl = `${appUrl}/join?invite=${invite.token}`
+
+    return NextResponse.json({ invite, inviteUrl }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Data tidak valid', detail: error.errors }, { status: 400 })
@@ -66,16 +77,23 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// Nonaktifkan member
 export async function DELETE(req: NextRequest) {
   const session = await getSessionFromRequest(req)
-  if (!session || session.role !== 'ADMIN') {
+  if (!session || !isAdmin(session.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const { searchParams } = new URL(req.url)
-  const id = searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  const memberId = searchParams.get('id')
+  if (!memberId) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
-  await prisma.user.delete({ where: { id } })
+  // Pastikan member ini milik tenant yang sama
+  const member = await prisma.tenantMember.findFirst({
+    where: { id: memberId, tenantId: session.tenantId! },
+  })
+  if (!member) return NextResponse.json({ error: 'Tidak ditemukan' }, { status: 404 })
+
+  await prisma.tenantMember.update({ where: { id: memberId }, data: { aktif: false } })
   return NextResponse.json({ sukses: true })
 }

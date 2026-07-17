@@ -1,7 +1,7 @@
 import { prisma } from './prisma'
 
 interface NotifOptions {
-  userId: string
+  userId: string  // isi dengan memberId
   noTujuan: string
   pesan: string
   via: 'whatsapp' | 'telegram'
@@ -56,7 +56,7 @@ export async function kirimDanLog(opts: NotifOptions): Promise<void> {
 
   await prisma.notifikasiLog.create({
     data: {
-      userId: opts.userId,
+      memberId: opts.userId || undefined,
       jenis: opts.via,
       pesan: opts.pesan,
       noTujuan: opts.noTujuan,

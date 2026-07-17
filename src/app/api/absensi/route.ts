@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSessionFromRequest } from '@/lib/auth'
 import { dalamRadius } from '@/lib/gps'
-import { kirimDanLog, pesanAbsenMasuk } from '@/lib/notifikasi'
 import { z } from 'zod'
 
 const checkInSchema = z.object({
@@ -10,27 +9,36 @@ const checkInSchema = z.object({
   longitude: z.number(),
   fotoBase64: z.string().optional(),
   waktu: z.string(),
+  lokasiId: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getSessionFromRequest(req)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!session || !session.tenantId || !session.memberId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const body = await req.json()
-    const { latitude, longitude, fotoBase64, waktu } = checkInSchema.parse(body)
+    const { latitude, longitude, fotoBase64, waktu, lokasiId } = checkInSchema.parse(body)
 
-    const sekolah = await prisma.sekolah.findUnique({ where: { id: session.sekolahId } })
-    if (!sekolah) return NextResponse.json({ error: 'Sekolah tidak ditemukan' }, { status: 404 })
+    // Cari lokasi aktif tenant
+    const lokasi = await prisma.lokasi.findFirst({
+      where: { tenantId: session.tenantId, aktif: true, ...(lokasiId ? { id: lokasiId } : {}) },
+    })
+
+    if (!lokasi) {
+      return NextResponse.json({ error: 'Lokasi absensi belum dikonfigurasi admin' }, { status: 404 })
+    }
 
     const dalamArea = dalamRadius(
       { latitude, longitude },
-      { latitude: sekolah.latitude, longitude: sekolah.longitude },
-      sekolah.radiusMeters
+      { latitude: lokasi.lat, longitude: lokasi.lng },
+      lokasi.radius
     )
     if (!dalamArea) {
       return NextResponse.json(
-        { error: `Anda berada di luar area sekolah (radius ${sekolah.radiusMeters}m)` },
+        { error: `Anda berada di luar area ${lokasi.nama} (radius ${lokasi.radius}m)` },
         { status: 400 }
       )
     }
@@ -39,17 +47,14 @@ export async function POST(req: NextRequest) {
     today.setHours(0, 0, 0, 0)
 
     const sudahAbsen = await prisma.absensi.findUnique({
-      where: { userId_tanggal: { userId: session.userId, tanggal: today } },
+      where: { memberId_tanggal: { memberId: session.memberId, tanggal: today } },
     })
     if (sudahAbsen?.waktuMasuk) {
       return NextResponse.json({ error: 'Anda sudah absen masuk hari ini' }, { status: 400 })
     }
 
     const jamConfig = await prisma.jamAbsensi.findFirst({
-      where: {
-        sekolahId: session.sekolahId,
-        berlakuUntuk: { has: session.role as any },
-      },
+      where: { tenantId: session.tenantId, aktif: true },
     })
 
     const waktuMasuk = new Date(waktu)
@@ -58,52 +63,25 @@ export async function POST(req: NextRequest) {
     if (jamConfig) {
       const [jam, menit] = jamConfig.jamMasuk.split(':').map(Number)
       const batasMasuk = new Date(today)
-      batasMasuk.setHours(jam, menit + jamConfig.toleransiMenit, 0, 0)
+      batasMasuk.setHours(jam, menit + jamConfig.toleransi, 0, 0)
       if (waktuMasuk > batasMasuk) status = 'TERLAMBAT'
     }
 
     const absensi = await prisma.absensi.upsert({
-      where: { userId_tanggal: { userId: session.userId, tanggal: today } },
-      update: {
-        waktuMasuk,
-        status,
-        latitudeMasuk: latitude,
-        longitudeMasuk: longitude,
-        fotoMasuk: fotoBase64,
-        jamMasukId: jamConfig?.id,
-      },
+      where: { memberId_tanggal: { memberId: session.memberId, tanggal: today } },
+      update: { waktuMasuk, status, latMasuk: latitude, lngMasuk: longitude, fotoMasuk: fotoBase64, lokasiId: lokasi.id },
       create: {
-        userId: session.userId,
+        tenantId: session.tenantId,
+        memberId: session.memberId,
+        lokasiId: lokasi.id,
         tanggal: today,
         waktuMasuk,
         status,
-        latitudeMasuk: latitude,
-        longitudeMasuk: longitude,
+        latMasuk: latitude,
+        lngMasuk: longitude,
         fotoMasuk: fotoBase64,
-        jamMasukId: jamConfig?.id,
       },
     })
-
-    const user = await prisma.user.findUnique({ where: { id: session.userId } })
-    const waktuStr = waktuMasuk.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-
-    if (user?.noHp) {
-      await kirimDanLog({
-        userId: session.userId,
-        noTujuan: user.noHp,
-        pesan: pesanAbsenMasuk(session.nama, waktuStr, status),
-        via: 'whatsapp',
-      })
-    }
-
-    if (user?.noHpOrtu) {
-      await kirimDanLog({
-        userId: session.userId,
-        noTujuan: user.noHpOrtu,
-        pesan: pesanAbsenMasuk(session.nama, waktuStr, status),
-        via: 'whatsapp',
-      })
-    }
 
     return NextResponse.json({ absensi, status })
   } catch (error) {
@@ -116,7 +94,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session || !session.memberId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const { searchParams } = new URL(req.url)
   const bulan = parseInt(searchParams.get('bulan') || String(new Date().getMonth() + 1))
@@ -126,10 +106,7 @@ export async function GET(req: NextRequest) {
   const selesai = new Date(tahun, bulan, 0)
 
   const absensi = await prisma.absensi.findMany({
-    where: {
-      userId: session.userId,
-      tanggal: { gte: mulai, lte: selesai },
-    },
+    where: { memberId: session.memberId, tanggal: { gte: mulai, lte: selesai } },
     orderBy: { tanggal: 'desc' },
   })
 

@@ -4,29 +4,32 @@ import { getSessionFromRequest } from '@/lib/auth'
 import { z } from 'zod'
 
 const izinSchema = z.object({
-  jenis: z.enum(['IZIN', 'SAKIT', 'CUTI', 'DINAS']),
+  jenis: z.enum(['IZIN', 'SAKIT', 'CUTI_TAHUNAN', 'CUTI_SAKIT', 'DINAS_LUAR']),
   tanggalMulai: z.string(),
   tanggalSelesai: z.string(),
-  alasan: z.string().min(10),
-  lampiran: z.string().optional(),
+  alasan: z.string().min(5),
+  lampiranUrl: z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getSessionFromRequest(req)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!session || !session.memberId || !session.tenantId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const body = await req.json()
     const data = izinSchema.parse(body)
 
     const izin = await prisma.izin.create({
       data: {
-        userId: session.userId,
+        tenantId: session.tenantId,
+        memberId: session.memberId,
         jenis: data.jenis,
         tanggalMulai: new Date(data.tanggalMulai),
         tanggalSelesai: new Date(data.tanggalSelesai),
         alasan: data.alasan,
-        lampiran: data.lampiran,
+        lampiranUrl: data.lampiranUrl,
         status: 'MENUNGGU',
       },
     })
@@ -42,17 +45,19 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromRequest(req)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session || !session.tenantId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  const isAdmin = ['ADMIN', 'KEPALA_SEKOLAH'].includes(session.role)
+  const isAdmin = ['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.role ?? '')
 
   const izin = await prisma.izin.findMany({
     where: isAdmin
-      ? { user: { sekolahId: session.sekolahId } }
-      : { userId: session.userId },
+      ? { tenantId: session.tenantId }
+      : { tenantId: session.tenantId, memberId: session.memberId! },
     include: {
-      user: { select: { nama: true, role: true } },
-      approver: { select: { nama: true } },
+      member: { include: { user: { select: { nama: true } } } },
+      approver: { include: { user: { select: { nama: true } } } },
     },
     orderBy: { createdAt: 'desc' },
     take: 50,
@@ -63,21 +68,19 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const session = await getSessionFromRequest(req)
-  if (!session || !['ADMIN', 'KEPALA_SEKOLAH'].includes(session.role)) {
+  if (!session || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.role ?? '')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const body = await req.json()
-  const { izinId, status, catatan } = body
+  const { izinId, status, catatan } = await req.json()
 
   const izin = await prisma.izin.update({
     where: { id: izinId },
     data: {
       status,
-      approverId: session.userId,
+      approverId: session.memberId,
       catatanApprover: catatan,
     },
-    include: { user: true },
   })
 
   return NextResponse.json({ izin })
