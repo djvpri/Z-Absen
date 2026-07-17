@@ -75,13 +75,23 @@ export type ZOneTokenPayload = {
 }
 
 export async function verifyZOneToken(token: string): Promise<ZOneTokenPayload | null> {
+  const secret = new TextEncoder().encode(
+    process.env.CROSS_APP_SECRET || 'uurclTHL375CiZeWi2g4T3GczU2YNY9I1wzjlsVTgSk'
+  )
   try {
-    const { payload } = await jwtVerify(token, CROSS_APP_SECRET)
+    const { payload } = await jwtVerify(token, secret)
     const p = payload as unknown as ZOneTokenPayload
-    if (p.app !== 'zabsen') return null
-    if (!p.email) return null
+    if (p.app !== 'zabsen') {
+      console.error('[SSO] app mismatch, expected "zabsen" got:', p.app)
+      return null
+    }
+    if (!p.email) {
+      console.error('[SSO] no email in token payload')
+      return null
+    }
     return p
-  } catch {
+  } catch (err) {
+    console.error('[SSO] jwtVerify failed:', err instanceof Error ? err.message : err)
     return null
   }
 }
