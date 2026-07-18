@@ -87,6 +87,7 @@ model Tenant {
   invites      Invite[]
   pengumuman   Pengumuman[]
   gaji         Gaji[]
+  jatahCuti    JatahCuti[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -189,6 +190,7 @@ model TenantMember {
   izin          Izin[]
   izinApprover  Izin[]        @relation("Approver")
   gaji          Gaji[]
+  jatahCuti     JatahCuti[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -348,6 +350,24 @@ model Izin {
 
   @@index([tenantId, status])
   @@map("izin")
+}
+
+// Kuota cuti per karyawan per tahun per jenis
+model JatahCuti {
+  id        String       @id @default(cuid())
+  tenantId  String
+  memberId  String
+  tahun     Int
+  jenis     JenisIzin
+  jatah     Int          @default(12) // total hari alokasi
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member    TenantMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([memberId, tahun, jenis])
+  @@index([tenantId, tahun])
+  @@map("jatah_cuti")
 }
 
 // =====================================================

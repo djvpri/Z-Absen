@@ -76,11 +76,7 @@ export async function PATCH(req: NextRequest) {
 
   const izin = await prisma.izin.update({
     where: { id: izinId },
-    data: {
-      status,
-      approverId: session.memberId,
-      catatanApprover: catatan,
-    },
+    data: { status, approverId: session.memberId, catatanApprover: catatan },
   })
 
   return NextResponse.json({ izin })
