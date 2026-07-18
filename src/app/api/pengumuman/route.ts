@@ -15,13 +15,9 @@ export async function GET(req: NextRequest) {
     where: {
       tenantId: session.tenantId!,
       aktif: true,
-      OR: [
-        { tanggalExpiry: null },
-        { tanggalExpiry: { gte: now } },
-      ],
-      OR: [
-        { targetRole: null },
-        { targetRole: session.role as never },
+      AND: [
+        { OR: [{ tanggalExpiry: null }, { tanggalExpiry: { gte: now } }] },
+        { OR: [{ targetRole: null }, { targetRole: session.role as never }] },
       ],
     },
     include: {
