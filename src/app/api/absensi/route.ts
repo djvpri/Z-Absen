@@ -53,7 +53,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Anda sudah absen masuk hari ini' }, { status: 400 })
     }
 
-    const jamConfig = await prisma.jamAbsensi.findFirst({
+    // Cek jadwal personal hari ini
+    const jadwalHariIni = await prisma.jadwalKerja.findUnique({
+      where: { memberId_tanggal: { memberId: session.memberId, tanggal: today } },
+      include: { shift: true },
+    })
+
+    if (jadwalHariIni?.libur) {
+      return NextResponse.json(
+        { error: 'Hari ini adalah hari libur sesuai jadwal kerja Anda' },
+        { status: 400 }
+      )
+    }
+
+    // Gunakan shift personal jika ada, atau fallback ke konfigurasi tenant
+    const jamConfig = jadwalHariIni?.shift ?? await prisma.jamAbsensi.findFirst({
       where: { tenantId: session.tenantId, aktif: true },
     })
 

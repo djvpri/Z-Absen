@@ -90,7 +90,7 @@ model Tenant {
   jatahCuti    JatahCuti[]
   lembur       Lembur[]
   mutasi       Mutasi[]
-  pengumuman   Pengumuman[]
+  jadwalKerja  JadwalKerja[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -212,6 +212,7 @@ model TenantMember {
   lembur           Lembur[]
   mutasi           Mutasi[]
   pengumumanBaca   PengumumanBaca[]
+  jadwalKerja      JadwalKerja[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -284,9 +285,11 @@ model JamAbsensi {
   jamMasuk    String   // "08:00"
   jamKeluar   String   // "17:00"
   toleransi   Int      @default(15)
+  warna       String   @default("#3b82f6")
   aktif       Boolean  @default(true)
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   absensi     Absensi[]
+  jadwalKerja JadwalKerja[]
   createdAt   DateTime @default(now())
 
   @@map("jam_absensi")
@@ -550,6 +553,28 @@ model PengumumanBaca {
   @@unique([pengumumanId, memberId])
   @@index([memberId])
   @@map("pengumuman_baca")
+}
+
+// =====================================================
+// JADWAL KERJA
+// =====================================================
+
+model JadwalKerja {
+  id         String       @id @default(cuid())
+  tenantId   String
+  memberId   String
+  tanggal    DateTime     @db.Date
+  shiftId    String?      // null = tidak ada shift (libur atau kosong)
+  libur      Boolean      @default(false)
+  keterangan String?
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member     TenantMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  shift      JamAbsensi?  @relation(fields: [shiftId], references: [id])
+  createdAt  DateTime     @default(now())
+
+  @@unique([memberId, tanggal])
+  @@index([tenantId, tanggal])
+  @@map("jadwal_kerja")
 }
 
 // =====================================================

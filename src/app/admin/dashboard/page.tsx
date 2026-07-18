@@ -219,6 +219,16 @@ export default function DashboardAdmin() {
             <p className="text-sm font-medium text-gray-900">Pengumuman</p>
             <p className="text-xs text-gray-400">Buat & kelola pengumuman</p>
           </a>
+          <a href="/admin/jadwal" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
+            <i className="bi bi-calendar3 text-2xl text-blue-500 block mb-1"></i>
+            <p className="text-sm font-medium text-gray-900">Jadwal Kerja</p>
+            <p className="text-xs text-gray-400">Assign shift per karyawan</p>
+          </a>
+          <a href="/admin/shift" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
+            <i className="bi bi-clock text-2xl text-violet-500 block mb-1"></i>
+            <p className="text-sm font-medium text-gray-900">Kelola Shift</p>
+            <p className="text-xs text-gray-400">Definisi jam & toleransi</p>
+          </a>
         </div>
       </div>
     </div>

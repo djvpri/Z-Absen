@@ -227,7 +227,7 @@ export default function CheckInPage() {
             {status === 'scanning' ? 'Memverifikasi...' : 'Absen Sekarang'}
           </button>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             <a href="/izin" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
               Ajukan Izin
             </a>
@@ -237,7 +237,7 @@ export default function CheckInPage() {
             <a href="/profil" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
               Profil
             </a>
-            <a href="/pengumuman" className="py-2.5 text-sm text-center border border-gray-200 rounded-xl hover:bg-gray-50 relative flex items-center justify-center gap-1.5 text-gray-600">
+            <a href="/pengumuman" className="py-2.5 text-sm text-center border border-gray-200 rounded-xl hover:bg-gray-50 relative flex items-center justify-center gap-1 text-gray-600">
               <i className="bi bi-megaphone text-sm" />
               <span>Pengumuman</span>
               {unreadPengumuman > 0 && (
@@ -245,6 +245,14 @@ export default function CheckInPage() {
                   {unreadPengumuman > 9 ? '9+' : unreadPengumuman}
                 </span>
               )}
+            </a>
+            <a href="/jadwal" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-1">
+              <i className="bi bi-calendar3 text-sm" />
+              <span>Jadwal</span>
+            </a>
+            <a href="/lembur" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-1">
+              <i className="bi bi-clock-history text-sm" />
+              <span>Lembur</span>
             </a>
           </div>
         </div>
