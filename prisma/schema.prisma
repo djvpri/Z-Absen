@@ -127,6 +127,17 @@ enum TipeKaryawan {
   FREELANCE
 }
 
+enum StatusPajak {
+  TK0   // Tidak Kawin, 0 tanggungan  PTKP 54jt
+  TK1   // Tidak Kawin, 1 tanggungan  PTKP 58.5jt
+  TK2   // Tidak Kawin, 2 tanggungan  PTKP 63jt
+  TK3   // Tidak Kawin, 3 tanggungan  PTKP 67.5jt
+  K0    // Kawin, 0 tanggungan        PTKP 58.5jt
+  K1    // Kawin, 1 tanggungan        PTKP 63jt
+  K2    // Kawin, 2 tanggungan        PTKP 67.5jt
+  K3    // Kawin, 3 tanggungan        PTKP 72jt
+}
+
 // User = identitas global dari SSO Z One — tidak ada password
 model User {
   id           String         @id @default(cuid())
@@ -174,7 +185,11 @@ model TenantMember {
   tanggalAkhir  DateTime?
 
   // === Penggajian ===
-  gajiPokok     Float?
+  gajiPokok        Float?
+  statusPajak      StatusPajak   @default(TK0)
+  tunjanganJabatan Float         @default(0)
+  tunjanganMakan   Float         @default(0)  // per hari hadir
+  tunjanganTransport Float       @default(0)  // per hari hadir
   namaBank      String?
   noRekening    String?
   atasNamaRek   String?
@@ -375,27 +390,51 @@ model JatahCuti {
 // =====================================================
 
 model Gaji {
-  id               String   @id @default(cuid())
-  tenantId         String
-  memberId         String
-  bulan            Int
-  tahun            Int
-  gajiPokok        Float    @default(0)
-  tunjanganHadir   Float    @default(0)
-  potonganAlpha    Float    @default(0)
-  potonganTerlambat Float   @default(0)
-  totalGaji        Float    @default(0)
-  jumlahHadir      Int      @default(0)
-  jumlahAlpha      Int      @default(0)
-  jumlahTerlambat  Int      @default(0)
-  jumlahIzin       Int      @default(0)
-  catatan          String?
-  dibayarkan       Boolean  @default(false)
-  tanggalBayar     DateTime?
-  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  member           TenantMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                String   @id @default(cuid())
+  tenantId          String
+  memberId          String
+  bulan             Int
+  tahun             Int
+
+  // Kehadiran
+  jumlahHadir       Int      @default(0)
+  jumlahTerlambat   Int      @default(0)
+  jumlahAlpha       Int      @default(0)
+  jumlahIzin        Int      @default(0)
+  jumlahHariKerja   Int      @default(0)   // total hari kerja dalam bulan
+
+  // Penghasilan
+  gajiPokok         Float    @default(0)
+  tunjanganJabatan  Float    @default(0)
+  tunjanganHadir    Float    @default(0)   // tunjangan makan+transport per hadir
+  tunjanganLainnya  Json?                  // [{nama, nominal}]
+  lemburJam         Int      @default(0)
+  lemburNominal     Float    @default(0)
+  gajiKotor         Float    @default(0)   // sum semua penghasilan
+
+  // Potongan kehadiran
+  potonganAlpha     Float    @default(0)
+  potonganTerlambat Float    @default(0)
+
+  // Potongan wajib
+  bpjsKes           Float    @default(0)   // 1% gajiPokok (karyawan)
+  bpjsTK            Float    @default(0)   // 3% gajiPokok (JHT 2% + JP 1%)
+  pph21             Float    @default(0)   // PPh 21 bulanan
+  potonganLainnya   Json?                  // [{nama, nominal}]
+
+  // Hasil akhir
+  totalPotongan     Float    @default(0)
+  takehomePay       Float    @default(0)   // gajiKotor - totalPotongan
+  totalGaji         Float    @default(0)   // alias takehomePay (backward compat)
+
+  catatan           String?
+  dibayarkan        Boolean  @default(false)
+  tanggalBayar      DateTime?
+
+  tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member            TenantMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   @@unique([memberId, bulan, tahun])
   @@index([tenantId, bulan, tahun])

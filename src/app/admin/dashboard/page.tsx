@@ -186,8 +186,8 @@ export default function DashboardAdmin() {
           </a>
           <a href="/admin/gaji" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
             <i className="bi bi-cash-coin text-2xl text-green-600 block mb-1"></i>
-            <p className="text-sm font-medium text-gray-900">Hitung Gaji</p>
-            <p className="text-xs text-gray-400">Insentif kehadiran karyawan</p>
+            <p className="text-sm font-medium text-gray-900">Penggajian</p>
+            <p className="text-xs text-gray-400">Slip gaji, BPJS, PPh 21</p>
           </a>
           <a href="/admin/izin" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
             <i className="bi bi-clipboard-check text-2xl text-purple-600 block mb-1"></i>

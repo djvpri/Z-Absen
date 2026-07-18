@@ -18,6 +18,10 @@ interface KaryawanDetail {
   departemenId?: string
   departemen?: { id: string; nama: string }
   tanggalMulai?: string
+  statusPajak?: string
+  tunjanganJabatan?: number
+  tunjanganMakan?: number
+  tunjanganTransport?: number
   tanggalAkhir?: string
   gajiPokok?: number
   nik?: string
@@ -292,6 +296,39 @@ export default function KaryawanDetailPage() {
                 <option value="ANGGOTA">Anggota (karyawan biasa)</option>
                 <option value="TENANT_ADMIN">Admin (bisa akses dashboard admin)</option>
               </select>
+            </div>
+
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Komponen Penggajian</p>
+              <div className="space-y-3">
+                <div>
+                  <label className={labelCls}>Status Pajak (PTKP)</label>
+                  <select value={form.statusPajak ?? 'TK0'} onChange={f('statusPajak')} className={inputCls}>
+                    <option value="TK0">TK/0 — Tidak Kawin, 0 tanggungan (54jt)</option>
+                    <option value="TK1">TK/1 — Tidak Kawin, 1 tanggungan (58.5jt)</option>
+                    <option value="TK2">TK/2 — Tidak Kawin, 2 tanggungan (63jt)</option>
+                    <option value="TK3">TK/3 — Tidak Kawin, 3 tanggungan (67.5jt)</option>
+                    <option value="K0">K/0 — Kawin, 0 tanggungan (58.5jt)</option>
+                    <option value="K1">K/1 — Kawin, 1 tanggungan (63jt)</option>
+                    <option value="K2">K/2 — Kawin, 2 tanggungan (67.5jt)</option>
+                    <option value="K3">K/3 — Kawin, 3 tanggungan (72jt)</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className={labelCls}>Tunjangan Jabatan/bln</label>
+                    <input value={form.tunjanganJabatan ?? 0} onChange={e => setForm(prev => ({ ...prev, tunjanganJabatan: Number(e.target.value) }))} type="number" min="0" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Tunjangan Makan/hari</label>
+                    <input value={form.tunjanganMakan ?? 0} onChange={e => setForm(prev => ({ ...prev, tunjanganMakan: Number(e.target.value) }))} type="number" min="0" className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Tunjangan Transport/hari</label>
+                    <input value={form.tunjanganTransport ?? 0} onChange={e => setForm(prev => ({ ...prev, tunjanganTransport: Number(e.target.value) }))} type="number" min="0" className={inputCls} />
+                  </div>
+                </div>
+              </div>
             </div>
 
             {form.tanggalAkhir && new Date(form.tanggalAkhir) < new Date() && (

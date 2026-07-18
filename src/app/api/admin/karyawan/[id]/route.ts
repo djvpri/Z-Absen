@@ -63,6 +63,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       kota: body.kota ?? undefined,
       provinsi: body.provinsi ?? undefined,
       kodePos: body.kodePos ?? undefined,
+      // Payroll settings
+      statusPajak: body.statusPajak ?? undefined,
+      tunjanganJabatan: body.tunjanganJabatan !== undefined ? Number(body.tunjanganJabatan) : undefined,
+      tunjanganMakan: body.tunjanganMakan !== undefined ? Number(body.tunjanganMakan) : undefined,
+      tunjanganTransport: body.tunjanganTransport !== undefined ? Number(body.tunjanganTransport) : undefined,
       // Rekening
       namaBank: body.namaBank ?? undefined,
       noRekening: body.noRekening ?? undefined,
