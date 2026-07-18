@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
 
   const dokumen = await prisma.dokumenKaryawan.create({
     data: {
-      tenantId: session.tenantId,
-      memberId: session.memberId,
+      tenantId: session.tenantId!,
+      memberId: session.memberId!,
       nama,
       kategori: kategori as never,
       nomorDokumen,
