@@ -115,7 +115,7 @@ export async function seedDemoData() {
   // Buat tenant demo baru
   const tenant = await prisma.tenant.create({
     data: {
-      nama: 'SiHadir Demo',
+      nama: 'PT Demo',
       slug: DEMO_SLUG,
       type: 'PERUSAHAAN',
       isDemo: true,
@@ -245,7 +245,7 @@ export async function seedDemoData() {
   await prisma.pengumuman.create({
     data: {
       tenantId: tenant.id,
-      judul: 'Selamat Datang di SiHadir Demo!',
+      judul: 'Selamat Datang di PT Demo!',
       isi: 'Ini adalah akun demo. Semua fitur bisa dicoba tanpa data nyata. Data akan direset setiap hari secara otomatis.',
     },
   })
