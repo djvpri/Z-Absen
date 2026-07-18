@@ -79,6 +79,7 @@ model Tenant {
   plan         Plan           @relation(fields: [planId], references: [id])
   subscription Subscription?
   members      TenantMember[]
+  departemen   Departemen[]
   lokasi       Lokasi[]
   jamAbsensi   JamAbsensi[]
   absensi      Absensi[]
@@ -103,6 +104,28 @@ enum Role {
   WALI          // Orang tua (khusus SEKOLAH)
 }
 
+enum JenisKelamin {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+enum Agama {
+  ISLAM
+  KRISTEN
+  KATOLIK
+  HINDU
+  BUDDHA
+  KONGHUCU
+}
+
+enum TipeKaryawan {
+  TETAP
+  KONTRAK
+  MAGANG
+  PARTIME
+  FREELANCE
+}
+
 // User = identitas global dari SSO Z One — tidak ada password
 model User {
   id           String         @id @default(cuid())
@@ -119,26 +142,75 @@ model User {
 
 // TenantMember = User yang bergabung ke Tenant tertentu
 model TenantMember {
-  id            String    @id @default(cuid())
+  id            String        @id @default(cuid())
   userId        String
   tenantId      String
-  role          Role      @default(ANGGOTA)
-  jabatan       String?   // "Guru Matematika" / "Staff HRD"
-  nip           String?   // NIP / NIK / ID karyawan
+  role          Role          @default(ANGGOTA)
+  jabatan       String?
+  nip           String?       // NIP / NIK / ID karyawan internal
   noHp          String?
-  faceEmbedding Json?     // face-api.js descriptor vector
-  aktif         Boolean   @default(true)
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  faceEmbedding Json?         // face-api.js descriptor vector
+  aktif         Boolean       @default(true)
+
+  // === Data Pribadi ===
+  nik           String?       // NIK KTP 16 digit
+  tempatLahir   String?
+  tanggalLahir  DateTime?
+  jenisKelamin  JenisKelamin?
+  agama         Agama?
+  golDarah      String?       // A / B / AB / O
+
+  // === Alamat ===
+  alamat        String?
+  kota          String?
+  provinsi      String?
+  kodePos       String?
+
+  // === Kontrak Kerja ===
+  departemenId  String?
+  tipeKaryawan  TipeKaryawan  @default(TETAP)
+  tanggalMulai  DateTime?
+  tanggalAkhir  DateTime?
+
+  // === Penggajian ===
+  gajiPokok     Float?
+  namaBank      String?
+  noRekening    String?
+  atasNamaRek   String?
+  npwp          String?
+
+  // === Kontak Darurat (JSON: [{nama, hubungan, noHp}]) ===
+  kontakDarurat Json?
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  departemen    Departemen?   @relation(fields: [departemenId], references: [id])
   absensi       Absensi[]
   izin          Izin[]
-  izinApprover  Izin[]    @relation("Approver")
+  izinApprover  Izin[]        @relation("Approver")
   gaji          Gaji[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@unique([userId, tenantId])
+  @@index([tenantId, aktif])
   @@map("tenant_members")
+}
+
+// Departemen / Divisi dalam sebuah Tenant
+model Departemen {
+  id        String         @id @default(cuid())
+  tenantId  String
+  nama      String
+  deskripsi String?
+  aktif     Boolean        @default(true)
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members   TenantMember[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([tenantId])
+  @@map("departemen")
 }
 
 // Invite link untuk mengundang anggota

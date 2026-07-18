@@ -199,6 +199,11 @@ export default function DashboardAdmin() {
             <p className="text-sm font-medium text-gray-900">Kelola Anggota</p>
             <p className="text-xs text-gray-400">Daftarkan wajah</p>
           </a>
+          <a href="/admin/karyawan" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50 col-span-2">
+            <i className="bi bi-person-vcard text-2xl text-rose-600 block mb-1"></i>
+            <p className="text-sm font-medium text-gray-900">Data Karyawan</p>
+            <p className="text-xs text-gray-400">Identitas, kontrak, rekening & kontak darurat</p>
+          </a>
         </div>
       </div>
     </div>
