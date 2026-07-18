@@ -227,32 +227,43 @@ export default function CheckInPage() {
             {status === 'scanning' ? 'Memverifikasi...' : 'Absen Sekarang'}
           </button>
 
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <a href="/izin" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
-              Ajukan Izin
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            <a href="/izin" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex flex-col items-center gap-0.5">
+              <i className="bi bi-file-earmark-text text-base" />
+              <span className="text-xs">Izin</span>
             </a>
-            <a href="/riwayat" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
-              Riwayat
+            <a href="/riwayat" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex flex-col items-center gap-0.5">
+              <i className="bi bi-clock-history text-base" />
+              <span className="text-xs">Riwayat</span>
             </a>
-            <a href="/profil" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
-              Profil
+            <a href="/profil" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex flex-col items-center gap-0.5">
+              <i className="bi bi-person-circle text-base" />
+              <span className="text-xs">Profil</span>
             </a>
-            <a href="/pengumuman" className="py-2.5 text-sm text-center border border-gray-200 rounded-xl hover:bg-gray-50 relative flex items-center justify-center gap-1 text-gray-600">
-              <i className="bi bi-megaphone text-sm" />
-              <span>Pengumuman</span>
+            <a href="/pengumuman" className="py-2.5 text-sm text-center border border-gray-200 rounded-xl hover:bg-gray-50 relative flex flex-col items-center gap-0.5 text-gray-600">
+              <i className="bi bi-megaphone text-base" />
+              <span className="text-xs">Info</span>
               {unreadPengumuman > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
                   {unreadPengumuman > 9 ? '9+' : unreadPengumuman}
                 </span>
               )}
             </a>
-            <a href="/jadwal" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-1">
-              <i className="bi bi-calendar3 text-sm" />
-              <span>Jadwal</span>
+            <a href="/jadwal" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex flex-col items-center gap-0.5">
+              <i className="bi bi-calendar3 text-base" />
+              <span className="text-xs">Jadwal</span>
             </a>
-            <a href="/lembur" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-1">
-              <i className="bi bi-clock-history text-sm" />
-              <span>Lembur</span>
+            <a href="/lembur" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex flex-col items-center gap-0.5">
+              <i className="bi bi-stopwatch text-base" />
+              <span className="text-xs">Lembur</span>
+            </a>
+            <a href="/penilaian" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex flex-col items-center gap-0.5">
+              <i className="bi bi-star-half text-base" />
+              <span className="text-xs">KPI</span>
+            </a>
+            <a href="/slip-gaji" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex flex-col items-center gap-0.5">
+              <i className="bi bi-receipt text-base" />
+              <span className="text-xs">Slip Gaji</span>
             </a>
           </div>
         </div>

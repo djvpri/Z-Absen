@@ -90,7 +90,9 @@ model Tenant {
   jatahCuti    JatahCuti[]
   lembur       Lembur[]
   mutasi       Mutasi[]
-  jadwalKerja  JadwalKerja[]
+  jadwalKerja        JadwalKerja[]
+  templatePenilaian  TemplatePenilaian[]
+  penilaian          Penilaian[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -213,6 +215,7 @@ model TenantMember {
   mutasi           Mutasi[]
   pengumumanBaca   PengumumanBaca[]
   jadwalKerja      JadwalKerja[]
+  penilaian        Penilaian[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -553,6 +556,62 @@ model PengumumanBaca {
   @@unique([pengumumanId, memberId])
   @@index([memberId])
   @@map("pengumuman_baca")
+}
+
+// =====================================================
+// PENILAIAN KINERJA (KPI)
+// =====================================================
+
+enum PeriodePenilaian {
+  BULANAN
+  KUARTALAN
+  SEMESTERAN
+  TAHUNAN
+}
+
+enum StatusPenilaian {
+  DRAFT
+  FINAL
+}
+
+model TemplatePenilaian {
+  id        String            @id @default(cuid())
+  tenantId  String
+  nama      String
+  periode   PeriodePenilaian  @default(TAHUNAN)
+  aktif     Boolean           @default(true)
+  // kriteria: [{id, nama, bobot, deskripsi}]  bobot total harus 100
+  kriteria  Json
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  penilaian Penilaian[]
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @default(now()) @updatedAt
+
+  @@index([tenantId])
+  @@map("template_penilaian")
+}
+
+model Penilaian {
+  id         String            @id @default(cuid())
+  tenantId   String
+  memberId   String
+  templateId String
+  reviewerId String?           // memberId reviewer (no FK to avoid Prisma ambiguity)
+  periode    String            // "2026", "2026-Q1", "2026-07"
+  // nilai: [{kriteriaId, nama, nilai (0-100), catatan}]
+  nilai      Json              @default("[]")
+  nilaiTotal Float             @default(0)
+  status     StatusPenilaian   @default(DRAFT)
+  catatan    String?
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member     TenantMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  template   TemplatePenilaian @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @default(now()) @updatedAt
+
+  @@unique([memberId, templateId, periode])
+  @@index([tenantId, memberId])
+  @@map("penilaian")
 }
 
 // =====================================================

@@ -229,6 +229,11 @@ export default function DashboardAdmin() {
             <p className="text-sm font-medium text-gray-900">Kelola Shift</p>
             <p className="text-xs text-gray-400">Definisi jam & toleransi</p>
           </a>
+          <a href="/admin/penilaian" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
+            <i className="bi bi-star-half text-2xl text-amber-500 block mb-1"></i>
+            <p className="text-sm font-medium text-gray-900">Penilaian Kinerja</p>
+            <p className="text-xs text-gray-400">Template KPI & evaluasi karyawan</p>
+          </a>
         </div>
       </div>
     </div>
