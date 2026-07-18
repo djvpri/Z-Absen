@@ -22,7 +22,15 @@ export async function GET(req: NextRequest) {
     })
 
     const users = await prisma.user.findMany({
-      select: { id: true, nama: true, email: true, isSuperAdmin: true, createdAt: true },
+      select: {
+        id: true, nama: true, email: true, isSuperAdmin: true, createdAt: true,
+        memberships: {
+          where: { aktif: true },
+          select: { tenantId: true, role: true },
+          orderBy: { createdAt: 'asc' },
+          take: 1,
+        },
+      },
       orderBy: { createdAt: 'desc' },
     })
 
@@ -41,6 +49,7 @@ export async function GET(req: NextRequest) {
         name: u.nama,
         email: u.email,
         role: u.isSuperAdmin ? 'SUPER_ADMIN' : 'USER',
+        tenantId: u.memberships[0]?.tenantId ?? null,
         active: true,
       })),
     })
