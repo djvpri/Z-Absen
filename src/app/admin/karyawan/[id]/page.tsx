@@ -44,7 +44,7 @@ interface KaryawanDetail {
 
 interface Departemen { id: string; nama: string }
 
-type Tab = 'identitas' | 'kontrak' | 'alamat' | 'rekening' | 'kontak_darurat'
+type Tab = 'identitas' | 'kontrak' | 'alamat' | 'rekening' | 'kontak_darurat' | 'mutasi'
 
 const TAB_LABEL: Record<Tab, string> = {
   identitas: 'Identitas',
@@ -52,6 +52,26 @@ const TAB_LABEL: Record<Tab, string> = {
   alamat: 'Alamat',
   rekening: 'Rekening',
   kontak_darurat: 'Knt. Darurat',
+  mutasi: 'Riwayat',
+}
+
+interface MutasiItem {
+  id: string
+  tanggal: string
+  jenis: string
+  sebelum: Record<string, unknown>
+  sesudah: Record<string, unknown>
+  keterangan: string | null
+}
+
+const JENIS_MUTASI_LABEL: Record<string, { label: string; cls: string }> = {
+  PINDAH_DEPARTEMEN: { label: 'Pindah Departemen', cls: 'bg-blue-100 text-blue-700' },
+  PERUBAHAN_JABATAN: { label: 'Perubahan Jabatan', cls: 'bg-purple-100 text-purple-700' },
+  PERUBAHAN_TIPE: { label: 'Perubahan Tipe', cls: 'bg-gray-100 text-gray-700' },
+  KENAIKAN_GAJI: { label: 'Kenaikan Gaji', cls: 'bg-green-100 text-green-700' },
+  PENURUNAN_GAJI: { label: 'Penurunan Gaji', cls: 'bg-red-100 text-red-700' },
+  KONTRAK_BARU: { label: 'Kontrak Baru', cls: 'bg-teal-100 text-teal-700' },
+  LAINNYA: { label: 'Lainnya', cls: 'bg-amber-100 text-amber-700' },
 }
 
 export default function KaryawanDetailPage() {
@@ -64,6 +84,8 @@ export default function KaryawanDetailPage() {
   const [tab, setTab] = useState<Tab>('identitas')
   const [form, setForm] = useState<Partial<KaryawanDetail>>({})
   const [kontakDarurat, setKontakDarurat] = useState<Array<{ nama: string; hubungan: string; noHp: string }>>([])
+  const [mutasiList, setMutasiList] = useState<MutasiItem[]>([])
+  const [mutasiLoading, setMutasiLoading] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -78,6 +100,14 @@ export default function KaryawanDetailPage() {
       setLoading(false)
     })
   }, [id])
+
+  useEffect(() => {
+    if (tab !== 'mutasi') return
+    setMutasiLoading(true)
+    fetch(`/api/admin/mutasi?memberId=${id}`)
+      .then(r => r.json())
+      .then(d => { setMutasiList(d.mutasi || []); setMutasiLoading(false) })
+  }, [tab, id])
 
   const f = (field: keyof KaryawanDetail) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value || undefined }))
@@ -445,6 +475,88 @@ export default function KaryawanDetailPage() {
             >
               <i className="bi bi-plus-lg mr-1.5"></i> Tambah Kontak Darurat
             </button>
+          </div>
+        )}
+
+        {/* TAB: Riwayat Mutasi */}
+        {tab === 'mutasi' && (
+          <div className="space-y-3">
+            {mutasiLoading ? (
+              <div className="flex justify-center py-10">
+                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : mutasiList.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+                <i className="bi bi-arrow-left-right text-4xl text-gray-300 block mb-2" />
+                <p className="text-sm text-gray-400">Belum ada riwayat mutasi</p>
+                <p className="text-xs text-gray-300 mt-1">Perubahan jabatan, departemen, atau gaji akan tercatat di sini</p>
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="absolute left-5 top-0 bottom-0 w-px bg-gray-200" />
+                {mutasiList.map((m, idx) => {
+                  const cfg = JENIS_MUTASI_LABEL[m.jenis] || JENIS_MUTASI_LABEL.LAINNYA
+                  const sbl = m.sebelum as Record<string, unknown>
+                  const ssd = m.sesudah as Record<string, unknown>
+                  return (
+                    <div key={m.id} className={`relative pl-12 ${idx > 0 ? 'mt-4' : ''}`}>
+                      <div className="absolute left-3.5 top-1.5 w-3 h-3 rounded-full border-2 border-blue-400 bg-white" />
+                      <div className="bg-white rounded-xl border border-gray-100 p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${cfg.cls}`}>
+                            {cfg.label}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {new Date(m.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 text-xs">
+                          {sbl.jabatan !== ssd.jabatan && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 w-16 shrink-0">Jabatan</span>
+                              <span className="line-through text-gray-400">{String(sbl.jabatan || '-')}</span>
+                              <i className="bi bi-arrow-right text-gray-400" />
+                              <span className="font-medium text-gray-700">{String(ssd.jabatan || '-')}</span>
+                            </div>
+                          )}
+                          {sbl.departemenId !== ssd.departemenId && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 w-16 shrink-0">Departemen</span>
+                              <span className="line-through text-gray-400">{String(sbl.departemenNama || '-')}</span>
+                              <i className="bi bi-arrow-right text-gray-400" />
+                              <span className="font-medium text-gray-700">{String(ssd.departemenNama || '-')}</span>
+                            </div>
+                          )}
+                          {sbl.tipeKaryawan !== ssd.tipeKaryawan && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 w-16 shrink-0">Tipe</span>
+                              <span className="line-through text-gray-400">{String(sbl.tipeKaryawan || '-')}</span>
+                              <i className="bi bi-arrow-right text-gray-400" />
+                              <span className="font-medium text-gray-700">{String(ssd.tipeKaryawan || '-')}</span>
+                            </div>
+                          )}
+                          {sbl.gajiPokok !== ssd.gajiPokok && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-400 w-16 shrink-0">Gaji</span>
+                              <span className="line-through text-gray-400">
+                                Rp {Number(sbl.gajiPokok || 0).toLocaleString('id-ID')}
+                              </span>
+                              <i className="bi bi-arrow-right text-gray-400" />
+                              <span className={`font-medium ${Number(ssd.gajiPokok) > Number(sbl.gajiPokok) ? 'text-green-600' : 'text-red-600'}`}>
+                                Rp {Number(ssd.gajiPokok || 0).toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {m.keterangan && (
+                          <p className="text-xs text-gray-400 mt-2 italic">{m.keterangan}</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

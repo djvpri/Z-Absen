@@ -35,6 +35,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   const existing = await prisma.tenantMember.findFirst({
     where: { id: params.id, tenantId: session.tenantId! },
+    include: { departemen: { select: { id: true, nama: true } } },
   })
   if (!existing) return NextResponse.json({ error: 'Tidak ditemukan' }, { status: 404 })
 
@@ -81,6 +82,42 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       departemen: { select: { id: true, nama: true } },
     },
   })
+
+  // Auto-log mutasi jika ada perubahan signifikan
+  const detectJenis = () => {
+    if (body.departemenId !== undefined && body.departemenId !== existing.departemenId) return 'PINDAH_DEPARTEMEN'
+    if (body.jabatan !== undefined && body.jabatan !== existing.jabatan) return 'PERUBAHAN_JABATAN'
+    if (body.tipeKaryawan !== undefined && body.tipeKaryawan !== existing.tipeKaryawan) return 'PERUBAHAN_TIPE'
+    if (body.gajiPokok !== undefined && Number(body.gajiPokok) !== existing.gajiPokok) {
+      return Number(body.gajiPokok) > (existing.gajiPokok ?? 0) ? 'KENAIKAN_GAJI' : 'PENURUNAN_GAJI'
+    }
+    return null
+  }
+  const jenisMutasi = detectJenis()
+  if (jenisMutasi) {
+    await prisma.mutasi.create({
+      data: {
+        tenantId: session.tenantId!,
+        memberId: params.id,
+        jenis: jenisMutasi as never,
+        sebelum: {
+          departemenId: existing.departemenId,
+          departemenNama: (existing as any).departemen?.nama ?? null,
+          jabatan: existing.jabatan,
+          tipeKaryawan: existing.tipeKaryawan,
+          gajiPokok: existing.gajiPokok,
+        },
+        sesudah: {
+          departemenId: body.departemenId ?? existing.departemenId,
+          departemenNama: null, // will be resolved on read
+          jabatan: body.jabatan ?? existing.jabatan,
+          tipeKaryawan: body.tipeKaryawan ?? existing.tipeKaryawan,
+          gajiPokok: body.gajiPokok !== undefined ? Number(body.gajiPokok) : existing.gajiPokok,
+        },
+        keterangan: body.catatanMutasi ?? null,
+      },
+    })
+  }
 
   return NextResponse.json({ success: true, karyawan: updated })
 }

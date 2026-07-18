@@ -209,6 +209,11 @@ export default function DashboardAdmin() {
             <p className="text-sm font-medium text-gray-900">Kuota Cuti</p>
             <p className="text-xs text-gray-400">Saldo & riwayat cuti karyawan</p>
           </a>
+          <a href="/admin/lembur" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
+            <i className="bi bi-clock-history text-2xl text-orange-600 block mb-1"></i>
+            <p className="text-sm font-medium text-gray-900">Kelola Lembur</p>
+            <p className="text-xs text-gray-400">Approval & rekap jam lembur</p>
+          </a>
         </div>
       </div>
     </div>

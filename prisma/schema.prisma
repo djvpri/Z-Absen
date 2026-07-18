@@ -88,6 +88,8 @@ model Tenant {
   pengumuman   Pengumuman[]
   gaji         Gaji[]
   jatahCuti    JatahCuti[]
+  lembur       Lembur[]
+  mutasi       Mutasi[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -206,6 +208,8 @@ model TenantMember {
   izinApprover  Izin[]        @relation("Approver")
   gaji          Gaji[]
   jatahCuti     JatahCuti[]
+  lembur        Lembur[]
+  mutasi        Mutasi[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -439,6 +443,68 @@ model Gaji {
   @@unique([memberId, bulan, tahun])
   @@index([tenantId, bulan, tahun])
   @@map("gaji")
+}
+
+// =====================================================
+// LEMBUR
+// =====================================================
+
+enum StatusLembur {
+  MENUNGGU
+  DISETUJUI
+  DITOLAK
+}
+
+model Lembur {
+  id              String       @id @default(cuid())
+  tenantId        String
+  memberId        String
+  tanggal         DateTime     @db.Date
+  jamLembur       Float        @default(0)
+  keterangan      String?
+  status          StatusLembur @default(MENUNGGU)
+  approvedById    String?      // memberId approver (no FK to avoid Prisma ambiguity)
+  tanggalApproval DateTime?
+  catatanApproval String?
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member          TenantMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([tenantId, memberId, tanggal])
+  @@index([tenantId, status])
+  @@map("lembur")
+}
+
+// =====================================================
+// MUTASI (Riwayat Perubahan Karyawan)
+// =====================================================
+
+enum JenisMutasi {
+  PINDAH_DEPARTEMEN
+  PERUBAHAN_JABATAN
+  PERUBAHAN_TIPE
+  KENAIKAN_GAJI
+  PENURUNAN_GAJI
+  KONTRAK_BARU
+  LAINNYA
+}
+
+model Mutasi {
+  id         String      @id @default(cuid())
+  tenantId   String
+  memberId   String
+  tanggal    DateTime    @default(now())
+  jenis      JenisMutasi @default(LAINNYA)
+  sebelum    Json
+  sesudah    Json
+  keterangan String?
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member     TenantMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt  DateTime    @default(now())
+
+  @@index([tenantId, memberId])
+  @@map("mutasi")
 }
 
 // =====================================================

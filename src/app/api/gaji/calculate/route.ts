@@ -38,6 +38,13 @@ export async function POST(req: NextRequest) {
 
     const gajiPokok = m.gajiPokok ?? 0
 
+    // Tarik total jam lembur yang sudah disetujui bulan ini
+    const lemburDisetujui = await prisma.lembur.findMany({
+      where: { memberId: m.id, status: 'DISETUJUI', tanggal: { gte: mulai, lte: selesai } },
+      select: { jamLembur: true },
+    })
+    const totalJamLembur = lemburDisetujui.reduce((s, l) => s + l.jamLembur, 0)
+
     const result = hitungPayroll({
       gajiPokok,
       statusPajak: m.statusPajak ?? 'TK0',
@@ -51,6 +58,7 @@ export async function POST(req: NextRequest) {
       jumlahHariKerja,
       hitungBpjs,
       hitungPph,
+      lemburJam: totalJamLembur,
     })
 
     const gaji = await prisma.gaji.upsert({
