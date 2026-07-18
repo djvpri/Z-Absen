@@ -18,6 +18,14 @@ export default function CheckInPage() {
   const [hasil, setHasil] = useState<HasilAbsen | null>(null)
   const [error, setError] = useState('')
   const faceApiLoaded = useRef(false)
+  const [unreadPengumuman, setUnreadPengumuman] = useState(0)
+
+  useEffect(() => {
+    fetch('/api/pengumuman/unread')
+      .then((r) => r.json())
+      .then((d) => setUnreadPengumuman(d.count || 0))
+      .catch(() => {})
+  }, [])
 
   const mulaiKamera = useCallback(async () => {
     try {
@@ -168,6 +176,21 @@ export default function CheckInPage() {
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center p-4 gap-4">
+        {unreadPengumuman > 0 && (
+          <a
+            href="/pengumuman"
+            className="w-full max-w-sm flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 hover:bg-blue-100 transition-colors"
+          >
+            <i className="bi bi-bell-fill text-blue-500 text-sm" />
+            <p className="flex-1 text-xs text-blue-700 font-medium">
+              {unreadPengumuman} pengumuman baru belum dibaca
+            </p>
+            <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+              {unreadPengumuman}
+            </span>
+          </a>
+        )}
+
         <div className="relative w-full max-w-sm aspect-[4/3] bg-gray-900 rounded-2xl overflow-hidden">
           <video
             ref={videoRef}
@@ -204,7 +227,7 @@ export default function CheckInPage() {
             {status === 'scanning' ? 'Memverifikasi...' : 'Absen Sekarang'}
           </button>
 
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <a href="/izin" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
               Ajukan Izin
             </a>
@@ -213,6 +236,15 @@ export default function CheckInPage() {
             </a>
             <a href="/profil" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
               Profil
+            </a>
+            <a href="/pengumuman" className="py-2.5 text-sm text-center border border-gray-200 rounded-xl hover:bg-gray-50 relative flex items-center justify-center gap-1.5 text-gray-600">
+              <i className="bi bi-megaphone text-sm" />
+              <span>Pengumuman</span>
+              {unreadPengumuman > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                  {unreadPengumuman > 9 ? '9+' : unreadPengumuman}
+                </span>
+              )}
             </a>
           </div>
         </div>

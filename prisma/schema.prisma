@@ -90,6 +90,7 @@ model Tenant {
   jatahCuti    JatahCuti[]
   lembur       Lembur[]
   mutasi       Mutasi[]
+  pengumuman   Pengumuman[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -208,10 +209,11 @@ model TenantMember {
   izinApprover  Izin[]        @relation("Approver")
   gaji          Gaji[]
   jatahCuti     JatahCuti[]
-  lembur        Lembur[]
-  mutasi        Mutasi[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  lembur           Lembur[]
+  mutasi           Mutasi[]
+  pengumumanBaca   PengumumanBaca[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@unique([userId, tenantId])
   @@index([tenantId, aktif])
@@ -511,16 +513,43 @@ model Mutasi {
 // PENGUMUMAN
 // =====================================================
 
-model Pengumuman {
-  id        String   @id @default(cuid())
-  tenantId  String
-  judul     String
-  isi       String
-  aktif     Boolean  @default(true)
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+enum PrioritasPengumuman {
+  RENDAH
+  NORMAL
+  PENTING
+  URGENT
+}
 
+model Pengumuman {
+  id            String               @id @default(cuid())
+  tenantId      String
+  judul         String
+  isi           String
+  prioritas     PrioritasPengumuman  @default(NORMAL)
+  pinned        Boolean              @default(false)
+  targetRole    Role?                // null = semua
+  tanggalExpiry DateTime?
+  aktif         Boolean              @default(true)
+  tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bacaList      PengumumanBaca[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([tenantId, aktif])
   @@map("pengumuman")
+}
+
+model PengumumanBaca {
+  id           String     @id @default(cuid())
+  pengumumanId String
+  memberId     String
+  tanggal      DateTime   @default(now())
+  pengumuman   Pengumuman @relation(fields: [pengumumanId], references: [id], onDelete: Cascade)
+  member       TenantMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([pengumumanId, memberId])
+  @@index([memberId])
+  @@map("pengumuman_baca")
 }
 
 // =====================================================

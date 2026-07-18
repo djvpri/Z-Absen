@@ -214,6 +214,11 @@ export default function DashboardAdmin() {
             <p className="text-sm font-medium text-gray-900">Kelola Lembur</p>
             <p className="text-xs text-gray-400">Approval & rekap jam lembur</p>
           </a>
+          <a href="/admin/pengumuman" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
+            <i className="bi bi-megaphone text-2xl text-cyan-600 block mb-1"></i>
+            <p className="text-sm font-medium text-gray-900">Pengumuman</p>
+            <p className="text-xs text-gray-400">Buat & kelola pengumuman</p>
+          </a>
         </div>
       </div>
     </div>
