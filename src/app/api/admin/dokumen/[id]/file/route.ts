@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     ? `attachment; filename="${encodeURIComponent(doc.fileName ?? 'file')}"`
     : `inline; filename="${encodeURIComponent(doc.fileName ?? 'file')}"`
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       'Content-Type': doc.fileMime ?? 'application/octet-stream',
       'Content-Disposition': disposition,
