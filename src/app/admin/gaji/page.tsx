@@ -341,12 +341,12 @@ export default function GajiPage() {
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Penghasilan</p>
                 <div className="space-y-1.5">
-                  {[
+                  {([
                     ['Gaji Pokok', slipData.gajiPokok],
                     ['Tunjangan Jabatan', slipData.tunjanganJabatan],
                     ['Tunjangan Hadir', slipData.tunjanganHadir],
                     ...(slipData.lemburNominal > 0 ? [[`Lembur (${slipData.lemburJam}j)`, slipData.lemburNominal]] : []),
-                  ].map(([label, val]) => val > 0 ? (
+                  ] as [string, number][]).map(([label, val]) => val > 0 ? (
                     <div key={String(label)} className="flex justify-between">
                       <span className="text-gray-500">{label}</span>
                       <span className="text-gray-800">{rp(Number(val))}</span>
@@ -363,13 +363,13 @@ export default function GajiPage() {
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Potongan</p>
                 <div className="space-y-1.5">
-                  {[
+                  {([
                     ['Potongan Alpha', slipData.potonganAlpha],
                     ['Potongan Terlambat', slipData.potonganTerlambat],
                     ['BPJS Kesehatan (1%)', slipData.bpjsKes],
                     ['BPJS TK (3%)', slipData.bpjsTK],
                     ['PPh 21', slipData.pph21],
-                  ].map(([label, val]) => val > 0 ? (
+                  ] as [string, number][]).map(([label, val]) => val > 0 ? (
                     <div key={String(label)} className="flex justify-between">
                       <span className="text-gray-500">{label}</span>
                       <span className="text-red-500">-{rp(Number(val))}</span>
