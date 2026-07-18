@@ -234,6 +234,11 @@ export default function DashboardAdmin() {
             <p className="text-sm font-medium text-gray-900">Penilaian Kinerja</p>
             <p className="text-xs text-gray-400">Template KPI & evaluasi karyawan</p>
           </a>
+          <a href="/admin/dokumen" className="bg-white border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
+            <i className="bi bi-folder2-open text-2xl text-teal-600 block mb-1"></i>
+            <p className="text-sm font-medium text-gray-900">Dokumen Karyawan</p>
+            <p className="text-xs text-gray-400">KTP, kontrak, ijazah, sertifikat</p>
+          </a>
         </div>
       </div>
     </div>

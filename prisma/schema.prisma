@@ -93,6 +93,7 @@ model Tenant {
   jadwalKerja        JadwalKerja[]
   templatePenilaian  TemplatePenilaian[]
   penilaian          Penilaian[]
+  dokumen            DokumenKaryawan[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -216,6 +217,7 @@ model TenantMember {
   pengumumanBaca   PengumumanBaca[]
   jadwalKerja      JadwalKerja[]
   penilaian        Penilaian[]
+  dokumen          DokumenKaryawan[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -653,4 +655,48 @@ model NotifikasiLog {
 
   @@index([tenantId])
   @@map("notifikasi_log")
+}
+
+// =====================================================
+// DOKUMEN KARYAWAN
+// =====================================================
+
+enum KategoriDokumen {
+  IDENTITAS
+  KONTRAK
+  PENDIDIKAN
+  SERTIFIKAT
+  LAINNYA
+}
+
+enum StatusDokumen {
+  AKTIF
+  KADALUARSA
+  DICABUT
+}
+
+model DokumenKaryawan {
+  id            String          @id @default(cuid())
+  tenantId      String
+  memberId      String
+  nama          String
+  kategori      KategoriDokumen @default(LAINNYA)
+  nomorDokumen  String?
+  tanggalTerbit DateTime?       @db.Date
+  tanggalExpiry DateTime?       @db.Date
+  fileData      Bytes?
+  fileMime      String?
+  fileName      String?
+  fileSize      Int?
+  status        StatusDokumen   @default(AKTIF)
+  catatan       String?
+  uploadedById  String?         // memberId uploader (no FK)
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  member        TenantMember    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now()) @updatedAt
+
+  @@index([tenantId, memberId])
+  @@index([tenantId, kategori])
+  @@map("dokumen_karyawan")
 }

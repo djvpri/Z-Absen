@@ -265,6 +265,10 @@ export default function CheckInPage() {
               <i className="bi bi-receipt text-base" />
               <span className="text-xs">Slip Gaji</span>
             </a>
+            <a href="/dokumen" className="py-2.5 text-sm text-center text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 flex flex-col items-center gap-0.5">
+              <i className="bi bi-folder2 text-base" />
+              <span className="text-xs">Dokumen</span>
+            </a>
           </div>
         </div>
       </div>
